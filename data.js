@@ -19,7 +19,7 @@
 
 const CONFIG = {
   BRSAPI_KEY: "BeNcsX6xfjRJW3YHXSHTLYN9QrEJTK6r",
-  BRSAPI_URL: "https://BrsApi.ir/Api/Market/Gold_Currency.php",
+  BRSAPI_URL: "https://Api.BrsApi.ir/Market/Gold_Currency.php",
   COINGECKO_URL: "https://api.coingecko.com/api/v3/simple/price",
   REFRESH_MS: 60 * 1000, // هر ۶۰ ثانیه به‌روزرسانی خودکار
   HISTORY_POINTS: 60,
