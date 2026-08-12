@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script src="assets/js/theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>پرتغییرترین‌های بازار | چی چند</title>
+<meta name="description" content="بیشترین رشد و بیشترین افت قیمت در بین طلا، ارز، سکه و رمزارز.">
+<meta name="keywords" content="قیمت طلا, قیمت دلار, قیمت سکه, قیمت ارز, قیمت ارز دیجیتال, انس جهانی طلا, قیمت لحظه‌ای طلا و ارز, نرخ ارز امروز, حباب سکه, قیمت خودرو">
+<link rel="canonical" href="https://example.com/movers.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="پرتغییرترین‌های بازار | چی چند">
+<meta property="og:description" content="بیشترین رشد و بیشترین افت قیمت در بین طلا، ارز، سکه و رمزارز.">
+<meta property="og:locale" content="fa_IR">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/css/style.css">
+
+
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main>
+
+<div class="container">
+  <section class="hero" style="padding:40px 0 10px;text-align:right;">
+    <span class="eyebrow"><span class="dot"></span> پویش بازار</span>
+    <h1 style="font-size:clamp(1.6rem,4vw,2.4rem);">بیشترین <span>تغییرات</span> بازار</h1>
+    <p style="margin:0;">مواردی که در ۲۴ ساعت گذشته بیشترین رشد یا افت را داشته‌اند (بر اساس آخرین دیتای دریافتی).</p>
+  </section>
+  <section class="section">
+    <div class="section-head"><h2>بیشترین رشد</h2></div>
+    <div class="grid-prices" id="gainers-grid"></div>
+  </section>
+  <section class="section">
+    <div class="section-head"><h2>بیشترین افت</h2></div>
+    <div class="grid-prices" id="losers-grid"></div>
+  </section>
+</div>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+
+  <script src="assets/js/items.js" defer></script>
+  <script src="assets/js/data.js" defer></script>
+  <script src="assets/js/favorites.js" defer></script>
+  <script src="assets/js/alerts.js" defer></script>
+  <script src="assets/js/render.js" defer></script>
+  <script src="assets/js/components.js" defer></script>
+
+<script defer>
+document.addEventListener("DOMContentLoaded", () => {
+  renderHeader("movers.html");
+  renderFooter();
+  initPriceEngine();
+
+  renderMovers("gainers-grid","losers-grid");
+  document.addEventListener("prices:updated", () => renderMovers("gainers-grid","losers-grid"));
+
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script src="assets/js/theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>جستجو | چی چند</title>
+<meta name="description" content="جستجوی سریع در بین قیمت طلا، ارز، سکه، رمزارز، فلزات، سنگ قیمتی، خودرو و کلکسیونی.">
+<meta name="keywords" content="قیمت طلا, قیمت دلار, قیمت سکه, قیمت ارز, قیمت ارز دیجیتال, انس جهانی طلا, قیمت لحظه‌ای طلا و ارز, نرخ ارز امروز, حباب سکه, قیمت خودرو">
+<link rel="canonical" href="https://example.com/search.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="جستجو | چی چند">
+<meta property="og:description" content="جستجوی سریع در بین قیمت طلا، ارز، سکه، رمزارز، فلزات، سنگ قیمتی، خودرو و کلکسیونی.">
+<meta property="og:locale" content="fa_IR">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/css/style.css">
+
+
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main>
+
+<div class="container">
+  <section class="hero" style="padding:40px 0 10px;text-align:right;">
+    <span class="eyebrow"><span class="dot"></span> جستجوی سراسری</span>
+    <h1 style="font-size:clamp(1.6rem,4vw,2.4rem);">دنبال <span>چه قیمتی</span> می‌گردید؟</h1>
+    <div class="search-box glass-strong" style="max-width:560px;margin-top:16px;">
+      <input id="s-input" type="text" placeholder="مثلاً: طلا، دلار، سکه امامی، بیت‌کوین…">
+    </div>
+  </section>
+  <section class="section">
+    <div class="flex gap-8" id="s-pills" style="flex-wrap:wrap;margin-bottom:18px;"></div>
+    <div class="grid-prices" id="s-grid"></div>
+  </section>
+</div>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+
+  <script src="assets/js/items.js" defer></script>
+  <script src="assets/js/data.js" defer></script>
+  <script src="assets/js/favorites.js" defer></script>
+  <script src="assets/js/alerts.js" defer></script>
+  <script src="assets/js/render.js" defer></script>
+  <script src="assets/js/components.js" defer></script>
+
+<script defer>
+document.addEventListener("DOMContentLoaded", () => {
+  renderHeader("search.html");
+  renderFooter();
+  initPriceEngine();
+
+  const params = new URLSearchParams(location.search);
+  const input = document.getElementById("s-input");
+  input.value = params.get("q") || "";
+  const pillsEl = document.getElementById("s-pills");
+  const cats = [{id:"all", title:"همه"}, ...SITE_CATEGORIES];
+  let curCat = "all";
+  function drawPills() {
+    pillsEl.innerHTML = cats.map(c => `<button class="pill" data-c="${c.id}" aria-pressed="${c.id===curCat}">${c.title}</button>`).join("");
+    pillsEl.querySelectorAll(".pill").forEach(b => b.addEventListener("click", () => { curCat = b.dataset.c; drawPills(); draw(); }));
+  }
+  function draw() {
+    const q = norm(input.value);
+    let items = SITE_ITEMS.filter(i => (curCat==="all" || i.cat===curCat) && (!q || norm(i.name).includes(q)));
+    const el = document.getElementById("s-grid");
+    el.innerHTML = items.length ? items.map(priceCardHTML).join("") : `<div class="empty-state">چیزی پیدا نشد. عبارت دیگری را امتحان کنید.</div>`;
+  }
+  drawPills(); draw();
+  input.addEventListener("input", draw);
+  document.addEventListener("prices:updated", draw);
+  document.addEventListener("favorites:updated", draw);
+
+});
+</script>
+</body>
+</html>

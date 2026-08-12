@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script src="assets/js/theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>هشدار قیمت | چی چند</title>
+<meta name="description" content="برای طلا، ارز، سکه یا رمزارز هشدار قیمت تنظیم کنید.">
+<meta name="keywords" content="قیمت طلا, قیمت دلار, قیمت سکه, قیمت ارز, قیمت ارز دیجیتال, انس جهانی طلا, قیمت لحظه‌ای طلا و ارز, نرخ ارز امروز, حباب سکه, قیمت خودرو">
+<link rel="canonical" href="https://example.com/alerts.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="هشدار قیمت | چی چند">
+<meta property="og:description" content="برای طلا، ارز، سکه یا رمزارز هشدار قیمت تنظیم کنید.">
+<meta property="og:locale" content="fa_IR">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/css/style.css">
+
+
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main>
+
+<div class="container">
+  <section class="hero" style="padding:40px 0 10px;text-align:right;">
+    <span class="eyebrow"><span class="dot"></span> هشدار قیمت</span>
+    <h1 style="font-size:clamp(1.6rem,4vw,2.4rem);">وقتی قیمت به عدد دلخواهتان رسید <span>خبردار شوید</span></h1>
+    <p style="margin:0;">این هشدارها فقط وقتی کار می‌کنند که سایت در تب مرورگرتان باز باشد (چون این یک سایت استاتیک بدون سرور است).</p>
+  </section>
+  <section class="section" style="display:grid;grid-template-columns:340px 1fr;gap:20px;" id="alerts-layout">
+    <div class="card glass">
+      <h3 style="margin-top:0;">هشدار جدید</h3>
+      <div class="field">
+        <label>مورد</label>
+        <select id="al-item"></select>
+      </div>
+      <div class="field">
+        <label>شرط</label>
+        <select id="al-dir">
+          <option value="above">رسید به یا بالاتر از</option>
+          <option value="below">رسید به یا پایین‌تر از</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>قیمت هدف</label>
+        <input id="al-price" type="number" placeholder="مثلاً 5000000">
+      </div>
+      <button class="btn" id="al-add" style="width:100%;">افزودن هشدار</button>
+    </div>
+    <div>
+      <div id="alerts-list"></div>
+    </div>
+  </section>
+</div>
+<style>@media(max-width:820px){#alerts-layout{grid-template-columns:1fr !important;}}</style>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+
+  <script src="assets/js/items.js" defer></script>
+  <script src="assets/js/data.js" defer></script>
+  <script src="assets/js/favorites.js" defer></script>
+  <script src="assets/js/alerts.js" defer></script>
+  <script src="assets/js/render.js" defer></script>
+  <script src="assets/js/components.js" defer></script>
+
+<script defer>
+document.addEventListener("DOMContentLoaded", () => {
+  renderHeader("alerts.html");
+  renderFooter();
+  initPriceEngine();
+
+  const sel = document.getElementById("al-item");
+  sel.innerHTML = SITE_CATEGORIES.map(c => `<optgroup label="${c.title}">${
+    SITE_ITEMS.filter(i=>i.cat===c.id).map(i=>`<option value="${i.id}">${i.name}</option>`).join("")
+  }</optgroup>`).join("");
+
+  document.getElementById("al-add").addEventListener("click", () => {
+    const itemId = sel.value;
+    const direction = document.getElementById("al-dir").value;
+    const price = parseFloat(document.getElementById("al-price").value);
+    if (!price) { showToast("قیمت هدف را وارد کنید"); return; }
+    ensureNotifyPermission();
+    addAlert(itemId, direction, price);
+    document.getElementById("al-price").value = "";
+    showToast("هشدار ثبت شد");
+  });
+
+  function drawAlerts() {
+    const list = getAlerts();
+    const el = document.getElementById("alerts-list");
+    if (!list.length) { el.innerHTML = `<div class="empty-state">${ICONS.bell}<br>هنوز هشداری ثبت نشده.</div>`; return; }
+    el.innerHTML = `<div class="table-wrap glass"><table><thead><tr>
+      <th>مورد</th><th>شرط</th><th class="num">قیمت هدف</th><th>وضعیت</th><th></th>
+    </tr></thead><tbody>${list.map(a => {
+      const it = SITE_ITEMS.find(i => i.id === a.itemId);
+      return `<tr>
+        <td>${it ? it.name : a.itemId}</td>
+        <td>${a.direction === "above" ? "رسید به بالاتر از" : "رسید به پایین‌تر از"}</td>
+        <td class="num">${formatPrice(a.targetPrice)}</td>
+        <td>${a.triggered ? '<span class="up">فعال شده</span>' : '<span class="text-dim">در انتظار</span>'}</td>
+        <td><button class="btn outline" onclick="removeAlert('${a.id}');drawAlerts();">حذف</button></td>
+      </tr>`;
+    }).join("")}</tbody></table></div>`;
+  }
+  drawAlerts();
+  document.addEventListener("alerts:updated", drawAlerts);
+
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://example.com/alerts.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/all-prices.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/coin.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/converter.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/crypto.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/currency.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/favorites.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/gold.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/index.html</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://example.com/item.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/movers.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/search.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/silver.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+</urlset>

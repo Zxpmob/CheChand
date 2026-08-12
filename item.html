@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script src="assets/js/theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>جزئیات قیمت | چی چند</title>
+<meta name="description" content="قیمت لحظه‌ای، نمودار روند و هشدار قیمت برای این مورد.">
+<meta name="keywords" content="قیمت طلا, قیمت دلار, قیمت سکه, قیمت ارز, قیمت ارز دیجیتال, انس جهانی طلا, قیمت لحظه‌ای طلا و ارز, نرخ ارز امروز, حباب سکه, قیمت خودرو">
+<link rel="canonical" href="https://example.com/item.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="جزئیات قیمت | چی چند">
+<meta property="og:description" content="قیمت لحظه‌ای، نمودار روند و هشدار قیمت برای این مورد.">
+<meta property="og:locale" content="fa_IR">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/css/style.css">
+
+
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main>
+
+<div class="container">
+  <section style="padding:30px 0 10px;" id="item-head"></section>
+  <section class="section" style="display:grid;grid-template-columns:2fr 1fr;gap:20px;" id="item-layout">
+    <div>
+      <div class="card glass" style="margin-bottom:20px;">
+        <h3 style="margin-top:0;font-size:.95rem;color:var(--text-1);">روند اخیر (بر اساس بازدیدهای شما از این صفحه)</h3>
+        <canvas id="item-chart" style="width:100%;height:220px;"></canvas>
+      </div>
+      <div class="card glass" id="item-alert-box">
+        <h3 style="margin-top:0;">هشدار قیمت برای این مورد</h3>
+        <div class="flex gap-8" style="flex-wrap:wrap;">
+          <select id="ia-dir" style="padding:11px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--text-0);">
+            <option value="above">رسید به بالاتر از</option>
+            <option value="below">رسید به پایین‌تر از</option>
+          </select>
+          <input id="ia-price" type="number" placeholder="قیمت هدف" style="flex:1;min-width:140px;padding:11px 14px;border-radius:10px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--text-0);">
+          <button class="btn" id="ia-add">ثبت هشدار</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section-head"><h2 style="font-size:1.05rem;">موارد مشابه</h2></div>
+      <div class="grid-prices" id="item-related" style="grid-template-columns:1fr;"></div>
+    </div>
+  </section>
+</div>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+
+  <script src="assets/js/items.js" defer></script>
+  <script src="assets/js/data.js" defer></script>
+  <script src="assets/js/favorites.js" defer></script>
+  <script src="assets/js/alerts.js" defer></script>
+  <script src="assets/js/render.js" defer></script>
+  <script src="assets/js/components.js" defer></script>
+
+<script defer>
+document.addEventListener("DOMContentLoaded", () => {
+  renderHeader("item.html");
+  renderFooter();
+  initPriceEngine();
+
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id");
+  const it = SITE_ITEMS.find(i => i.id === id);
+  const headEl = document.getElementById("item-head");
+  if (!it) {
+    headEl.innerHTML = `<div class="empty-state">این مورد پیدا نشد. <a class="more" href="search.html">به جستجو بروید ›</a></div>`;
+    document.getElementById("item-layout").style.display = "none";
+  } else {
+    document.title = it.name + " | چی چند";
+    function drawHead() {
+      const d = PriceStore.data[it.id];
+      const chg = d ? d.changePercent : null;
+      const chgClass = chg > 0 ? "up" : chg < 0 ? "down" : "";
+      const fav = isFavorite(it.id);
+      headEl.innerHTML = `
+        <span class="eyebrow"><span class="dot"></span> ${SITE_CATEGORIES.find(c=>c.id===it.cat)?.title || ""}</span>
+        <div class="flex items-center gap-12" style="justify-content:space-between;flex-wrap:wrap;">
+          <div>
+            <h1 style="font-size:clamp(1.5rem,4vw,2.2rem);margin:0 0 8px;">${it.name}</h1>
+            <div class="flex items-center gap-12">
+              <span class="pc-price" style="font-size:2rem;">${d ? formatPrice(d.price) : "—"}</span>
+              <span class="pc-unit">${it.unit}</span>
+              ${d && chg !== null && chg !== undefined && !Number.isNaN(chg) ? `<span class="pc-chg ${chgClass}" style="font-size:1rem;">${chg>0?"▲":"▼"} ${Math.abs(chg).toFixed(2)}٪</span>` : ""}
+            </div>
+            <p class="text-dim" style="font-size:.8rem;">${d ? "آخرین به‌روزرسانی: " + timeAgo(d.updated) : "در حال دریافت…"}</p>
+          </div>
+          <button class="btn ${fav ? '' : 'outline'}" id="ia-fav">${fav ? "★ در علاقه‌مندی‌ها" : "☆ افزودن به علاقه‌مندی‌ها"}</button>
+        </div>`;
+      document.getElementById("ia-fav").addEventListener("click", () => {
+        const active = toggleFavorite(it.id);
+        drawHead();
+      });
+    }
+    drawHead();
+    document.addEventListener("prices:updated", drawHead);
+
+    function drawChart() {
+      drawSparkline(document.getElementById("item-chart"), getHistory(it.id), getComputedStyle(document.documentElement).getPropertyValue("--gold-1"));
+    }
+    drawChart();
+    document.addEventListener("prices:updated", drawChart);
+    window.addEventListener("resize", drawChart);
+
+    document.getElementById("ia-add").addEventListener("click", () => {
+      const price = parseFloat(document.getElementById("ia-price").value);
+      if (!price) { showToast("قیمت هدف را وارد کنید"); return; }
+      ensureNotifyPermission();
+      addAlert(it.id, document.getElementById("ia-dir").value, price);
+      document.getElementById("ia-price").value = "";
+      showToast("هشدار ثبت شد");
+    });
+
+    function drawRelated() {
+      const rel = SITE_ITEMS.filter(i => i.cat === it.cat && i.id !== it.id).slice(0, 6);
+      document.getElementById("item-related").innerHTML = rel.map(priceCardHTML).join("") || `<div class="empty-state">موردی نیست.</div>`;
+    }
+    drawRelated();
+    document.addEventListener("prices:updated", drawRelated);
+  }
+
+});
+</script>
+</body>
+</html>

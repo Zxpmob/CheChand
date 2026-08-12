@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script src="assets/js/theme.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>همه‌ی قیمت‌ها | چی چند</title>
+<meta name="description" content="جدول کامل و قابل جست‌وجوی قیمت طلا، ارز، سکه، رمزارز و کالاهای باارزش.">
+<meta name="keywords" content="قیمت طلا, قیمت دلار, قیمت سکه, قیمت ارز, قیمت ارز دیجیتال, انس جهانی طلا, قیمت لحظه‌ای طلا و ارز, نرخ ارز امروز, حباب سکه, قیمت خودرو">
+<link rel="canonical" href="https://example.com/all-prices.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="همه‌ی قیمت‌ها | چی چند">
+<meta property="og:description" content="جدول کامل و قابل جست‌وجوی قیمت طلا، ارز، سکه، رمزارز و کالاهای باارزش.">
+<meta property="og:locale" content="fa_IR">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/css/style.css">
+
+
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main>
+
+<div class="container">
+  <section class="hero" style="padding:40px 0 10px;text-align:right;">
+    <span class="eyebrow"><span class="dot"></span> جدول کامل</span>
+    <h1 style="font-size:clamp(1.6rem,4vw,2.4rem);">همه‌ی <span>قیمت‌ها</span> در یک جدول</h1>
+    <p style="margin:0;">جست‌وجو کنید، بر اساس دسته فیلتر کنید و با کلیک روی هر ستون مرتب کنید.</p>
+  </section>
+  <section class="section">
+    <div class="flex gap-12" style="flex-wrap:wrap;margin-bottom:18px;align-items:center;">
+      <div class="search-box glass" style="flex:1;min-width:220px;">
+        <input id="ap-search" type="text" placeholder="جست‌وجو در بین همه‌ی قیمت‌ها…">
+      </div>
+      <div class="flex gap-8" id="ap-pills" style="flex-wrap:wrap;"></div>
+    </div>
+    <div id="ap-table"></div>
+  </section>
+</div>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+
+  <script src="assets/js/items.js" defer></script>
+  <script src="assets/js/data.js" defer></script>
+  <script src="assets/js/favorites.js" defer></script>
+  <script src="assets/js/alerts.js" defer></script>
+  <script src="assets/js/render.js" defer></script>
+  <script src="assets/js/components.js" defer></script>
+
+<script defer>
+document.addEventListener("DOMContentLoaded", () => {
+  renderHeader("all-prices.html");
+  renderFooter();
+  initPriceEngine();
+
+  const pillsEl = document.getElementById("ap-pills");
+  const cats = [{id:"all", title:"همه"}, ...SITE_CATEGORIES];
+  let curCat = "all";
+  function drawPills() {
+    pillsEl.innerHTML = cats.map(c => `<button class="pill" data-c="${c.id}" aria-pressed="${c.id===curCat}">${c.title}</button>`).join("");
+    pillsEl.querySelectorAll(".pill").forEach(b => b.addEventListener("click", () => {
+      curCat = b.dataset.c; drawPills();
+      renderAllPricesTable("ap-table", document.getElementById("ap-search").value, curCat);
+    }));
+  }
+  drawPills();
+  renderAllPricesTable("ap-table", "", "all");
+  document.getElementById("ap-search").addEventListener("input", (e) => {
+    renderAllPricesTable("ap-table", e.target.value, curCat);
+  });
+  document.addEventListener("prices:updated", () => renderAllPricesTable("ap-table", document.getElementById("ap-search").value, curCat));
+
+});
+</script>
+</body>
+</html>

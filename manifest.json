@@ -1,0 +1,12 @@
+{
+  "name": "چی چند",
+  "short_name": "چی چند",
+  "description": "قیمت لحظه‌ای طلا، ارز، سکه و رمزارز",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
+  "lang": "fa",
+  "dir": "rtl",
+  "icons": []
+}
