@@ -75,9 +75,15 @@ document.addEventListener("DOMContentLoaded", () => {
   initPriceEngine();
 
   const sel = document.getElementById("al-item");
-  sel.innerHTML = SITE_CATEGORIES.map(c => `<optgroup label="${c.title}">${
-    SITE_ITEMS.filter(i=>i.cat===c.id).map(i=>`<option value="${i.id}">${i.name}</option>`).join("")
-  }</optgroup>`).join("");
+  function fillSelect() {
+    const cur = sel.value;
+    sel.innerHTML = SITE_CATEGORIES.map(c => `<optgroup label="${c.title}">${
+      SITE_ITEMS.filter(i=>i.cat===c.id).map(i=>`<option value="${i.id}">${i.name}</option>`).join("")
+    }</optgroup>`).join("");
+    if (cur && SITE_ITEMS.some(i => i.id === cur)) sel.value = cur;
+  }
+  fillSelect();
+  document.addEventListener("items:updated", fillSelect);
 
   document.getElementById("al-add").addEventListener("click", () => {
     const itemId = sel.value;

@@ -41,7 +41,7 @@ function renderHeader(activePage) {
     { href: "gold.html", label: "طلا" },
     { href: "currency.html", label: "ارز" },
     { href: "coin.html", label: "سکه" },
-    { href: "crypto.html", label: "دیجیتال" },
+    { href: "crypto.html", label: "ارز دیجیتال" },
     { href: "all-prices.html", label: "همه قیمت‌ها" },
     { href: "movers.html", label: "پرتغییرترین‌ها" },
     { href: "converter.html", label: "مبدل و ماشین‌حساب" },

@@ -5,11 +5,10 @@
  * و هم برای «صفحه مبدل واحد» استفاده می‌شود.
  *
  * source هر آیتم مشخص می‌کند دیتای زنده‌اش از کجا می‌آید:
- *   "brsapi"   → از وب‌سرویس BrsApi.ir (طلا / ارز / سکه) — نیاز به کلید رایگان دارد
- *   "coingecko"→ از CoinGecko (رمزارز) — رایگان و بدون کلید
- *   "manual"   → مرجع ثابت (خودرو، سنگ قیمتی، کلکسیونی) — چون API رایگان و
- *                معتبر ایرانی برای این‌ها پیدا نشد؛ خودتان از data.js می‌توانید
- *                این بخش را به یک منبع زنده وصل کنید.
+ *   "brsapi" → از وب‌سرویس رایگان BrsApi.ir (طلا / نقره / سکه / ارز)
+ *
+ * رمزارزها دیگر اینجا تعریف نمی‌شوند: ۱۰۰ رمزارز برتر بازار به‌صورت
+ * پویا از CoinGecko گرفته می‌شود (نگاه کنید به data.js).
  *
  * برای هر آیتمِ برگرفته از BrsApi، فیلد match آرایه‌ای از کلیدواژه‌هاست که
  * data.js با نام فارسی/انگلیسیِ برگردانده‌شده از API مقایسه می‌کند تا آیتم
@@ -53,16 +52,9 @@ const SITE_ITEMS = [
   { id: "aud", cat: "currency", name: "دلار استرالیا", unit: "تومان", source: "brsapi", match: ["دلار استرالیا", "AUD"] },
 
   // ---------------- رمزارز (CoinGecko) ----------------
-  { id: "btc", cat: "crypto", name: "بیت‌کوین", unit: "دلار", source: "coingecko", cgId: "bitcoin" },
-  { id: "eth", cat: "crypto", name: "اتریوم", unit: "دلار", source: "coingecko", cgId: "ethereum" },
-  { id: "usdt", cat: "crypto", name: "تتر", unit: "دلار", source: "coingecko", cgId: "tether" },
-  { id: "bnb", cat: "crypto", name: "بی‌ان‌بی", unit: "دلار", source: "coingecko", cgId: "binancecoin" },
-  { id: "sol", cat: "crypto", name: "سولانا", unit: "دلار", source: "coingecko", cgId: "solana" },
-  { id: "xrp", cat: "crypto", name: "ریپل", unit: "دلار", source: "coingecko", cgId: "ripple" },
-  { id: "doge", cat: "crypto", name: "دوج‌کوین", unit: "دلار", source: "coingecko", cgId: "dogecoin" },
-  { id: "ada", cat: "crypto", name: "کاردانو", unit: "دلار", source: "coingecko", cgId: "cardano" },
-  { id: "ton", cat: "crypto", name: "تون‌کوین", unit: "دلار", source: "coingecko", cgId: "the-open-network" },
-  { id: "trx", cat: "crypto", name: "ترون", unit: "دلار", source: "coingecko", cgId: "tron" },
+  // رمزارزها دیگر اینجا تعریف نمی‌شوند — ۱۰۰ رمزارز برتر بازار به‌صورت
+  // خودکار و زنده از CoinGecko گرفته و در همین‌جا (در حافظه) اضافه
+  // می‌شوند؛ کد مربوطه در data.js، تابع applyCoinGeckoMarkets() است.
 
 ];
 

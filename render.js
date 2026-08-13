@@ -61,6 +61,7 @@ function wireLiveGrid(containerId, categoryId, limit) {
   renderPriceGrid(containerId, categoryId, limit);
   document.addEventListener("prices:updated", () => renderPriceGrid(containerId, categoryId, limit));
   document.addEventListener("favorites:updated", () => renderPriceGrid(containerId, categoryId, limit));
+  document.addEventListener("items:updated", () => renderPriceGrid(containerId, categoryId, limit));
 }
 
 /* ---------------- جدول همه‌ی قیمت‌ها ---------------- */

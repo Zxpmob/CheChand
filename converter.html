@@ -96,6 +96,7 @@
   <script src="favorites.js" defer></script>
   <script src="alerts.js" defer></script>
   <script src="render.js" defer></script>
+  <script src="converter.js" defer></script>
   <script src="components.js" defer></script>
 
 <script defer>
@@ -156,9 +157,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // دارایی من
   const aSel = document.getElementById("a-item");
-  aSel.innerHTML = SITE_CATEGORIES.map(c => `<optgroup label="${c.title}">${
-    SITE_ITEMS.filter(i=>i.cat===c.id).map(i=>`<option value="${i.id}">${i.name}</option>`).join("")
-  }</optgroup>`).join("");
+  function fillASel() {
+    const cur = aSel.value;
+    aSel.innerHTML = SITE_CATEGORIES.map(c => `<optgroup label="${c.title}">${
+      SITE_ITEMS.filter(i=>i.cat===c.id).map(i=>`<option value="${i.id}">${i.name}</option>`).join("")
+    }</optgroup>`).join("");
+    if (cur && SITE_ITEMS.some(i => i.id === cur)) aSel.value = cur;
+  }
+  fillASel();
+  document.addEventListener("items:updated", fillASel);
 
   function drawAssets() {
     const assets = getAssets();

@@ -18,6 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 
 <script type="application/ld+json">
 {
@@ -52,10 +53,13 @@
 
   <section class="section">
     <div class="section-head">
-      <h2>دسته‌بندی‌های بازار</h2>
-      <p class="desc">هر دسته را باز کنید تا لیست کامل و آپدیت آن را ببینید.</p>
+      <h2>روند قیمت طلای ۱۸ عیار</h2>
+      <p class="desc">با نگه‌داشتن موس روی نمودار، تاریخ و ساعت دقیق و قیمت همان لحظه را ببینید.</p>
     </div>
-    <div class="grid-cats" id="cat-grid"></div>
+    <div class="card glass" style="padding:22px 18px;">
+      <canvas id="gold-chart" style="width:100%;height:280px;"></canvas>
+      <p class="text-dim" id="gold-chart-note" style="font-size:.76rem;margin:14px 0 0;"></p>
+    </div>
   </section>
 
   <section class="section">
@@ -127,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderFooter();
   initPriceEngine();
 
-  renderCategoryGrid("cat-grid");
   wireLiveGrid("gold-grid","gold",6);
   wireLiveGrid("currency-grid","currency",8);
   wireLiveGrid("crypto-grid","crypto",6);
@@ -138,6 +141,80 @@ document.addEventListener("DOMContentLoaded", () => {
     location.href = "search.html?q=" + encodeURIComponent(document.getElementById("hero-search-input").value);
   });
 
+  // ---------------- نمودار زنده‌ی طلای ۱۸ عیار با تولتیپ دقیق ----------------
+  let goldChart = null;
+  function goldChartData() {
+    const hist = getHistory("gold-18");
+    return {
+      labels: hist.map(p => p.t),
+      values: hist.map(p => p.p),
+    };
+  }
+  function fmtDateTime(ts) {
+    const d = new Date(ts);
+    return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(d);
+  }
+  function drawGoldChart() {
+    const { labels, values } = goldChartData();
+    const noteEl = document.getElementById("gold-chart-note");
+    if (labels.length < 2) {
+      noteEl.textContent = "نمودار همین حالا شروع به ثبت نقطه‌های واقعی قیمت کرد؛ هرچه سایت را بیشتر باز نگه دارید یا بیشتر سر بزنید، این روند کامل‌تر می‌شود.";
+    } else {
+      noteEl.textContent = "این نمودار از لحظه‌ای که این سایت روی مرورگر شما باز شده، قیمت‌های واقعی و دریافتی را ثبت می‌کند.";
+    }
+    const ctx = document.getElementById("gold-chart").getContext("2d");
+    const goldColor = getComputedStyle(document.documentElement).getPropertyValue("--gold-1").trim() || "#d4af37";
+    if (goldChart) {
+      goldChart.data.labels = labels;
+      goldChart.data.datasets[0].data = values;
+      goldChart.update("none");
+      return;
+    }
+    goldChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "طلای ۱۸ عیار (تومان)",
+          data: values,
+          borderColor: goldColor,
+          backgroundColor: goldColor + "22",
+          fill: true,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: goldColor,
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: { display: false },
+          y: {
+            ticks: { color: "rgba(150,150,150,.7)", callback: (v) => formatPrice(v) },
+            grid: { color: "rgba(150,150,150,.12)" },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            rtl: true,
+            titleFont: { family: "Vazirmatn" },
+            bodyFont: { family: "Vazirmatn" },
+            callbacks: {
+              title: (items) => items.length ? fmtDateTime(labels[items[0].dataIndex]) : "",
+              label: (item) => formatPrice(item.parsed.y) + " تومان",
+            },
+          },
+        },
+      },
+    });
+  }
+  drawGoldChart();
+  document.addEventListener("prices:updated", drawGoldChart);
 });
 </script>
 </body>
