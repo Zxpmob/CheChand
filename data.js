@@ -73,14 +73,19 @@ function recordDiagError(url, err) {
 window.NERKH_DIAG = DIAG;
 
 async function fetchJson(url, opts) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(url, { cache: "no-store", ...opts });
+    const res = await fetch(url, { cache: "no-store", signal: controller.signal, ...opts });
     if (!res.ok) throw new Error("HTTP " + res.status);
     return await res.json();
   } catch (err) {
-    console.error("[چی چند] خطا در دریافت", url, err);
-    recordDiagError(url, err);
+    const msg = err && err.name === "AbortError" ? "بیش از ۱۰ ثانیه پاسخی نیامد (تایم‌اوت)" : err;
+    console.error("[چی چند] خطا در دریافت", url, msg);
+    recordDiagError(url, err && err.name === "AbortError" ? new Error("تایم‌اوت (۱۰ ثانیه)") : err);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -189,32 +194,36 @@ function applyNavasan({ gold, fiat }) {
   }
 }
 
-async function fetchNobitexAll() {
-  return fetchJson(CONFIG.NOBITEX_STATS_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({}),
-  });
+/* رمزارز در «حالت مستقیم»: Nobitex از اینجا کار نمی‌کند چون API آن برای
+   استفاده‌ی مستقیم از دامنه‌های دیگر (CORS) باز نیست — همان چیزی که
+   خطای «NetworkError when attempting to fetch resource» نشانش می‌داد.
+   Nobitex فقط داخل update-prices.js (که سمت سرور اجرا می‌شود، نه توی
+   مرورگر) قابل استفاده است. برای حالت مستقیم از CoinGecko استفاده
+   می‌کنیم که صراحتاً برای فراخوانی مستقیم از مرورگر ساخته شده. */
+const COINGECKO_MARKETS_URL = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h";
+
+async function fetchCoinGeckoMarkets() {
+  return fetchJson(COINGECKO_MARKETS_URL);
 }
 
-function applyNobitexCrypto(raw) {
-  if (!raw || !raw.stats) return;
+function applyCoinGeckoMarkets(raw) {
+  if (!raw || !Array.isArray(raw)) return;
   let itemsAdded = false;
-  Object.entries(raw.stats).forEach(([pair, s]) => {
-    if (!pair.endsWith("-usdt") || s.isClosed) return;
-    const symbol = pair.replace("-usdt", "").toUpperCase();
-    const price = Number(s.latest || s.bestSell || s.bestBuy);
-    if (!price) return;
-    const dayOpen = Number(s.dayOpen) || null;
-    const changePct = s.dayChange !== undefined && s.dayChange !== null
-      ? Number(s.dayChange)
-      : (dayOpen ? ((price - dayOpen) / dayOpen) * 100 : null);
-    const id = "crypto-" + symbol.toLowerCase();
+  raw.forEach((coin) => {
+    const id = "crypto-" + coin.id;
     if (!SITE_ITEMS.some((it) => it.id === id)) {
-      SITE_ITEMS.push({ id, cat: "crypto", name: symbol + "/USDT", unit: "دلار", source: "nobitex" });
+      SITE_ITEMS.push({
+        id, cat: "crypto",
+        name: coin.name + (coin.symbol ? " (" + coin.symbol.toUpperCase() + ")" : ""),
+        unit: "دلار", source: "coingecko",
+      });
       itemsAdded = true;
     }
-    setPrice(id, { price, changePercent: changePct, unit: "دلار", cat: "crypto", updated: Date.now() });
+    setPrice(id, {
+      price: coin.current_price,
+      changePercent: coin.price_change_percentage_24h,
+      unit: "دلار", cat: "crypto", updated: Date.now(),
+    });
   });
   if (itemsAdded) document.dispatchEvent(new CustomEvent("items:updated"));
 }
@@ -331,9 +340,9 @@ async function refreshAllPrices() {
     if (applySupabaseRows(rows)) handled = true;
   }
   if (!handled) {
-    const [nav, nobitex] = await Promise.all([fetchNavasan(), fetchNobitexAll()]);
+    const [nav, crypto] = await Promise.all([fetchNavasan(), fetchCoinGeckoMarkets()]);
     applyNavasan(nav);
-    applyNobitexCrypto(nobitex);
+    applyCoinGeckoMarkets(crypto);
   }
   PriceStore.ready = true;
   PriceStore.lastFetch = Date.now();

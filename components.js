@@ -116,7 +116,7 @@ function wireDiagnostics(headerEl) {
       <pre style="white-space:pre-wrap;direction:ltr;text-align:left;background:rgba(0,0,0,.15);padding:10px;border-radius:10px;margin:8px 0 0;font-size:.72rem;user-select:all;">${errText}</pre>
     `;
     headerEl.appendChild(box);
-  }, 12000);
+  }, 14000);
 }
 
 function renderTicker() {
@@ -161,7 +161,7 @@ function renderFooter() {
         </div>
         <div>
           <h4>درباره‌ی داده‌ها</h4>
-          <p>قیمت طلا/سکه/ارز از یک منبع آزاد و آماده‌ی داده‌ی Navasan و قیمت رمزارز از نوبیتکس دریافت می‌شود (یا از Supabase، اگر وصل شده باشد) و صرفاً جنبه‌ی اطلاع‌رسانی دارد.</p>
+          <p>قیمت طلا/سکه/ارز از یک منبع آزاد و آماده‌ی داده‌ی Navasan و قیمت رمزارز از CoinGecko دریافت می‌شود (یا از Supabase و نوبیتکس، اگر وصل شده باشد) و صرفاً جنبه‌ی اطلاع‌رسانی دارد.</p>
         </div>
       </div>
       <div class="footer-bottom">
