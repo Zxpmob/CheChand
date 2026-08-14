@@ -65,6 +65,13 @@ function pick(obj, keys) {
   return undefined;
 }
 
+const DIAG = { errors: [] };
+function recordDiagError(url, err) {
+  DIAG.errors.push({ url, message: (err && err.message) || String(err), time: Date.now() });
+  if (DIAG.errors.length > 20) DIAG.errors.shift();
+}
+window.NERKH_DIAG = DIAG;
+
 async function fetchJson(url, opts) {
   try {
     const res = await fetch(url, { cache: "no-store", ...opts });
@@ -72,6 +79,7 @@ async function fetchJson(url, opts) {
     return await res.json();
   } catch (err) {
     console.error("[چی چند] خطا در دریافت", url, err);
+    recordDiagError(url, err);
     return null;
   }
 }
@@ -218,14 +226,16 @@ function setPrice(id, info) {
   pushHistory(id, info.price);
 }
 
-function pushHistory(id, price) {
+function pushHistory(id, price, explicitTs) {
   if (typeof price !== "number" || Number.isNaN(price)) return;
   let hist = {};
   try { hist = JSON.parse(localStorage.getItem(CONFIG.HISTORY_KEY) || "{}"); } catch (e) { hist = {}; }
   const arr = hist[id] || [];
+  const t = explicitTs || Date.now();
   const last = arr[arr.length - 1];
-  if (!last || last.p !== price) {
-    arr.push({ t: Date.now(), p: price });
+  if (!last || last.p !== price || explicitTs) {
+    arr.push({ t, p: price });
+    arr.sort((a, b) => a.t - b.t);
     while (arr.length > CONFIG.HISTORY_POINTS) arr.shift();
     hist[id] = arr;
     try { localStorage.setItem(CONFIG.HISTORY_KEY, JSON.stringify(hist)); } catch (e) {}
@@ -240,15 +250,68 @@ function getHistory(id) {
 }
 
 /* تاریخچه‌ی یک آیتم را برمی‌گرداند: اگر Supabase وصل است از آنجا (واقعاً
-   چندروزه)، وگرنه از localStorage (فقط از الان به بعد) */
+   چندروزه)، وگرنه برای طلای ۱۸ عیار از تاریخچه‌ی commit های گیت‌هاب
+   (بک‌فیل واقعی، بدون دیتابیس) و برای بقیه از localStorage */
 async function loadItemHistory(id) {
   if (isSupabaseConfigured()) {
     try {
       const rows = await fetchSupabaseHistory(id);
       if (rows.length) return rows;
     } catch (e) { console.error(e); }
+  } else if (id === "gold-18") {
+    await backfillGoldHistoryFromGitHub();
   }
   return getHistory(id);
+}
+
+/* ==================== تاریخچه‌ی واقعی بدون دیتابیس ====================
+   داده‌ی Navasan هر ۳۰ دقیقه با یک commit جدید روی گیت‌هاب آپدیت می‌شود؛
+   یعنی خودِ تاریخچه‌ی commit های آن مخزن، یک آرشیو واقعی از قیمت طلا در
+   طول زمان است. اینجا آن تاریخچه را (فقط یک‌بار، برای همیشه در مرورگر
+   کاربر ذخیره می‌شود) می‌خوانیم — بدون نیاز به هیچ دیتابیسی. */
+const GOLD_BACKFILL_FLAG = "nerkh_gold_backfill_done_v1";
+const GOLD_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/gold.json&per_page=100";
+
+async function runWithLimit(tasks, limit) {
+  const results = [];
+  let i = 0;
+  async function worker() {
+    while (i < tasks.length) {
+      const idx = i++;
+      results[idx] = await tasks[idx]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return results;
+}
+
+async function backfillGoldHistoryFromGitHub(onProgress) {
+  if (localStorage.getItem(GOLD_BACKFILL_FLAG)) return false;
+  try {
+    const page1 = await fetchJson(GOLD_COMMITS_API + "&page=1");
+    const page2 = await fetchJson(GOLD_COMMITS_API + "&page=2");
+    const commits = [...(page1 || []), ...(page2 || [])];
+    if (!commits.length) return false;
+
+    const tasks = commits.map((c) => async () => {
+      const sha = c.sha;
+      const date = c.commit && c.commit.committer ? new Date(c.commit.committer.date).getTime() : null;
+      const raw = await fetchJson(`https://raw.githubusercontent.com/HosseinOdd/Navasan-API/${sha}/data/gold.json`);
+      if (!raw || !date) return null;
+      const row = raw["18ayar"];
+      if (!row || typeof row.value !== "number") return null;
+      return { t: date, p: row.value / 10 };
+    });
+
+    const points = (await runWithLimit(tasks, 8)).filter(Boolean);
+    points.forEach((pt) => pushHistory("gold-18", pt.p, pt.t));
+    localStorage.setItem(GOLD_BACKFILL_FLAG, "1");
+    if (onProgress) onProgress(points.length);
+    return points.length > 0;
+  } catch (e) {
+    console.error("[چی چند] بک‌فیل تاریخچه‌ی طلا ناموفق بود:", e);
+    return false;
+  }
 }
 
 function loadCache() {

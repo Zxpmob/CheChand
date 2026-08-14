@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
 
 <script type="application/ld+json">
 {
@@ -58,7 +59,10 @@
     </div>
     <div class="card glass" style="padding:22px 18px;">
       <canvas id="gold-chart" style="width:100%;height:280px;"></canvas>
-      <p class="text-dim" id="gold-chart-note" style="font-size:.76rem;margin:14px 0 0;"></p>
+      <div class="flex items-center gap-12" style="justify-content:space-between;flex-wrap:wrap;margin-top:14px;">
+        <p class="text-dim" id="gold-chart-note" style="font-size:.76rem;margin:0;flex:1;min-width:220px;"></p>
+        <button class="btn outline" id="gold-chart-reset" style="font-size:.78rem;padding:8px 16px;">بازنشانی نما</button>
+      </div>
     </div>
   </section>
 
@@ -141,50 +145,47 @@ document.addEventListener("DOMContentLoaded", () => {
     location.href = "search.html?q=" + encodeURIComponent(document.getElementById("hero-search-input").value);
   });
 
-  // ---------------- نمودار زنده‌ی طلای ۱۸ عیار با تولتیپ دقیق ----------------
+  // ---------------- نمودار زنده‌ی طلای ۱۸ عیار با تاریخچه‌ی واقعی و کشیدن با موس ----------------
   let goldChart = null;
-  async function goldChartData() {
+  async function goldChartPoints() {
     const hist = await loadItemHistory("gold-18");
-    return {
-      labels: hist.map(p => p.t),
-      values: hist.map(p => p.p),
-    };
+    return hist.map(p => ({ x: p.t, y: p.p }));
   }
   function fmtDateTime(ts) {
-    const d = new Date(ts);
-    return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(d);
+    return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ts));
   }
+  function fmtShort(ts) {
+    return new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(ts));
+  }
+  if (window.ChartZoom) { try { Chart.register(window.ChartZoom); } catch (e) {} }
+
   async function drawGoldChart() {
-    const { labels, values } = await goldChartData();
+    const points = await goldChartPoints();
     const noteEl = document.getElementById("gold-chart-note");
-    if (labels.length < 2) {
+    if (points.length < 2) {
       noteEl.textContent = isSupabaseConfigured()
         ? "هنوز داده‌ی تاریخی کافی در Supabase ثبت نشده؛ کمی صبر کنید تا ربات گیت‌هاب چند بار قیمت را ثبت کند."
-        : "نمودار همین حالا شروع به ثبت نقطه‌های واقعی قیمت کرد؛ هرچه سایت را بیشتر باز نگه دارید یا بیشتر سر بزنید، این روند کامل‌تر می‌شود. برای نمودار چندروزه‌ی واقعی، Supabase را طبق README وصل کنید.";
+        : "در حال بارگذاری تاریخچه‌ی واقعی طلا (از خودِ منبع داده)… چند ثانیه صبر کنید.";
     } else {
-      noteEl.textContent = isSupabaseConfigured()
-        ? "این نمودار از تاریخچه‌ی واقعی و ذخیره‌شده در Supabase ساخته شده — برای همه‌ی بازدیدکننده‌ها یکسان است."
-        : "این نمودار از لحظه‌ای که این سایت روی مرورگر شما باز شده، قیمت‌های واقعی و دریافتی را ثبت می‌کند.";
+      noteEl.textContent = "با نگه‌داشتن موس روی نمودار، تاریخ و قیمت دقیق همان لحظه را می‌بینید. با کشیدن (درگ) به چپ/راست یا اسکرول، تاریخ‌های قدیم‌تر یا جدیدتر را ببینید — برای بازگشت به حالت اول، دکمه‌ی «بازنشانی نما» را بزنید.";
     }
     const ctx = document.getElementById("gold-chart").getContext("2d");
     const goldColor = getComputedStyle(document.documentElement).getPropertyValue("--gold-1").trim() || "#d4af37";
     if (goldChart) {
-      goldChart.data.labels = labels;
-      goldChart.data.datasets[0].data = values;
+      goldChart.data.datasets[0].data = points;
       goldChart.update("none");
       return;
     }
     goldChart = new Chart(ctx, {
       type: "line",
       data: {
-        labels,
         datasets: [{
           label: "طلای ۱۸ عیار (تومان)",
-          data: values,
+          data: points,
           borderColor: goldColor,
           backgroundColor: goldColor + "22",
           fill: true,
-          tension: 0.35,
+          tension: 0.25,
           pointRadius: 0,
           pointHoverRadius: 5,
           pointHoverBackgroundColor: goldColor,
@@ -196,7 +197,11 @@ document.addEventListener("DOMContentLoaded", () => {
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         scales: {
-          x: { display: false },
+          x: {
+            type: "linear",
+            ticks: { color: "rgba(150,150,150,.7)", maxRotation: 0, callback: (v) => fmtShort(v) },
+            grid: { color: "rgba(150,150,150,.10)" },
+          },
           y: {
             ticks: { color: "rgba(150,150,150,.7)", callback: (v) => formatPrice(v) },
             grid: { color: "rgba(150,150,150,.12)" },
@@ -204,12 +209,17 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         plugins: {
           legend: { display: false },
+          zoom: {
+            pan: { enabled: true, mode: "x" },
+            zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "x" },
+            limits: { x: { minRange: 1000 * 60 * 30 } },
+          },
           tooltip: {
             rtl: true,
             titleFont: { family: "Vazirmatn" },
             bodyFont: { family: "Vazirmatn" },
             callbacks: {
-              title: (items) => items.length ? fmtDateTime(labels[items[0].dataIndex]) : "",
+              title: (items) => items.length ? fmtDateTime(items[0].parsed.x) : "",
               label: (item) => formatPrice(item.parsed.y) + " تومان",
             },
           },
@@ -219,6 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   drawGoldChart();
   document.addEventListener("prices:updated", drawGoldChart);
+  document.getElementById("gold-chart-reset")?.addEventListener("click", () => { if (goldChart) goldChart.resetZoom(); });
 });
 </script>
 </body>

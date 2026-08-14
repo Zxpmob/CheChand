@@ -94,6 +94,29 @@ function renderHeader(activePage) {
 
   renderTicker();
   document.addEventListener("prices:updated", renderTicker);
+  wireDiagnostics(el);
+}
+
+/* ------------- بنر عیب‌یابی: اگر بعد از ۱۲ ثانیه هیچ قیمتی نیامد،
+   خطای واقعی را نشان می‌دهد تا بشود کپی و برای رفع مشکل فرستاد ------------- */
+function wireDiagnostics(headerEl) {
+  setTimeout(() => {
+    const hasPrices = window.PriceStore && Object.keys(PriceStore.data).length > 0;
+    if (hasPrices) return;
+    const diag = window.NERKH_DIAG || { errors: [] };
+    const box = document.createElement("div");
+    box.className = "glass-strong";
+    box.style.cssText = "margin-top:10px;padding:14px 16px;border-radius:16px;border-color:var(--danger);font-size:.8rem;line-height:1.9;";
+    const errText = diag.errors.length
+      ? diag.errors.slice(-6).map((e) => `• ${e.url}\n  ${e.message}`).join("\n")
+      : "هیچ خطایی ثبت نشده (یعنی درخواست‌ها اصلاً پاسخ نگرفته‌اند — احتمالاً فیلترینگ یا اینترنت کند است).";
+    box.innerHTML = `
+      <b style="color:var(--danger);">قیمت‌ها دریافت نشد.</b>
+      برای رفع مشکل، متن زیر را کپی کنید و برای پشتیبانی بفرستید:
+      <pre style="white-space:pre-wrap;direction:ltr;text-align:left;background:rgba(0,0,0,.15);padding:10px;border-radius:10px;margin:8px 0 0;font-size:.72rem;user-select:all;">${errText}</pre>
+    `;
+    headerEl.appendChild(box);
+  }, 12000);
 }
 
 function renderTicker() {
