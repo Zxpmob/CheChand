@@ -1,86 +1,62 @@
 /**
  * data.js — لایه‌ی دیتای زنده‌ی سایت
  * -------------------------------------------------------------
- * این فایل تنها جایی است که باید برای «وصل کردن API واقعی» ویرایش کنید.
+ * دو حالت دارد:
  *
- * 1) طلا / سکه / ارز از BrsApi.ir می‌آید (وب‌سرویس رایگان ایرانی، تا ۱۵۰۰
- *    ریکوئست در روز رایگان است). یک کلید رایگان از این آدرس بگیرید:
- *       https://brsapi.ir/free-api-gold-currency-webservice/
- *    و آن را در CONFIG.BRSAPI_KEY پایین همین فایل جای‌گذاری کنید.
+ * ۱) اگر Supabase را وصل کرده باشید (پایین همین فایل، CONFIG.SUPABASE_URL
+ *    و CONFIG.SUPABASE_ANON_KEY را پر کرده باشید): سایت فقط با Supabase
+ *    حرف می‌زند. قیمت‌ها را یک ربات گیت‌هاب (فایل update-prices.js، هر
+ *    ۱۵ دقیقه، از سرورهای گیت‌هاب) در Supabase می‌گذارد — این روش چون از
+ *    ایران فیلترینگ رد نمی‌شود، قابل‌اعتمادتر است. راهنمای کامل در
+ *    README.md، بخش «راه‌اندازی Supabase».
  *
- * 2) رمزارزها از CoinGecko می‌آید که کاملاً رایگان و بدون کلید است، پس
- *    از همان لحظه‌ی اول کار می‌کند.
- *
- * 3) فلزات صنعتی/سنگ‌های قیمتی/خودرو/کلکسیونی چون هیچ API رایگان و معتبر
- *    ایرانی برایشان پیدا نشد، فعلاً به‌صورت «مرجع دستی» کار می‌کنند
- *    (در items.js، source:"manual"). هر وقت یک API برایشان پیدا کردید،
- *    کافی‌ست یک تابع fetch مثل دو تابع پایین برایش اضافه کنید.
- */
-
-/**
- * data.js — لایه‌ی دیتای زنده‌ی سایت
- * -------------------------------------------------------------
- * این فایل تنها جایی است که باید برای «وصل کردن API واقعی» ویرایش کنید.
- *
- * 1) طلا / سکه / ارز: اول از وب‌سرویس رایگان و بدون‌کلیدِ BrsApi
- *    (Api_Free_Gold_Currency_v2.json) خوانده می‌شود. اگر آن در دسترس
- *    نبود، به‌صورت پشتیبان سراغ نسخه‌ی کلیددار می‌رود (اگر کلید گذاشته
- *    باشید). کلید رایگان را از اینجا بگیرید:
- *       https://brsapi.ir/free-api-gold-currency-webservice/
- *
- * 2) رمزارزها از CoinGecko (بدون کلید) می‌آید — و چون خواستید «همه‌ی
- *    ارزهای دیجیتال» نمایش داده شود، ۱۰۰ رمزارز برتر بازار به‌صورت
- *    خودکار و پویا دریافت و به لیست آیتم‌ها اضافه می‌شوند (نیازی نیست
- *    از قبل در items.js تعریف شوند).
+ * ۲) اگر Supabase را وصل نکرده باشید: سایت مستقیم از مرورگر کاربر برای
+ *    طلا/سکه/ارز به یک آینه‌ی رایگان و تأییدشده‌ی داده‌ی Navasan روی
+ *    گیت‌هاب (raw.githubusercontent.com) و برای رمزارز به Nobitex (صرافی
+ *    ایرانی) وصل می‌شود. Nobitex را عمداً به‌جای CoinGecko گذاشتم چون
+ *    داخل ایران میزبانی می‌شود و احتمال فیلترشدنش خیلی کمتر است.
  */
 
 const CONFIG = {
-  BRSAPI_FREE_URL: "https://BrsApi.ir/FreeTsetmcBourseApi/Api_Free_Gold_Currency_v2.json",
-  BRSAPI_KEY: "BeNcsX6xfjRJW3YHXSHTLYN9QrEJTK6r",
-  BRSAPI_URL: "https://BrsApi.ir/Api/Market/Gold_Currency.php",
-  COINGECKO_MARKETS_URL: "https://api.coingecko.com/api/v3/coins/markets",
-  CRYPTO_PAGES: 1,       // هر صفحه ۱۰۰ رمزارز؛ برای دریافت بیشتر این عدد را زیاد کنید
-  REFRESH_MS: 60 * 1000, // هر ۶۰ ثانیه به‌روزرسانی خودکار
+  // --- حالت ۱: Supabase (اختیاری، ولی توصیه‌شده) ---
+  SUPABASE_URL: "",       // مثلاً: https://xxxxxxxx.supabase.co
+  SUPABASE_ANON_KEY: "",  // کلید anon public (از Settings → API در Supabase)
+
+  // --- حالت ۲: اتصال مستقیم (بدون نیاز به هیچ تنظیمی از پیش کار می‌کند) ---
+  NOBITEX_STATS_URL: "https://api.nobitex.ir/market/stats",
+
+  REFRESH_MS: 60 * 1000,
   HISTORY_POINTS: 300,
-  CACHE_KEY: "nerkh_prices_v2",
-  HISTORY_KEY: "nerkh_history_v2",
+  CACHE_KEY: "nerkh_prices_v4",
+  HISTORY_KEY: "nerkh_history_v4",
 };
 
+function isSupabaseConfigured() {
+  return !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
+}
+
 const PriceStore = {
-  data: {},      // id -> {price, change, changePercent, unit, updated, cat}
+  data: {},
   ready: false,
   lastFetch: null,
 };
 
 /* ------------------------------------------------------------------ */
-/* ابزار: نرمال‌سازی رشته برای مقایسه‌ی نام‌های فارسی/انگلیسی           */
 function norm(s) {
-  return (s || "")
-    .toString()
+  return (s || "").toString()
     .replace(/[\u200c\s\-_.]/g, "")
-    .replace(/ي/g, "ی")
-    .replace(/ك/g, "ک")
+    .replace(/ي/g, "ی").replace(/ك/g, "ک")
     .toLowerCase();
 }
 
-/* هر آبجکتی که شبیه آیتم قیمت باشد (name + یک فیلد عددی) را از هر عمقی
-   داخل جیسون پیدا می‌کند؛ چون ساختار دقیق خروجی BrsApi ممکن است کمی
-   فرق کند، این تابع محافظه‌کارانه با هر شکل معقولی کار می‌کند. */
 function flattenPriceObjects(node, out) {
   out = out || [];
   if (!node || typeof node !== "object") return out;
-  if (Array.isArray(node)) {
-    node.forEach((n) => flattenPriceObjects(n, out));
-    return out;
-  }
+  if (Array.isArray(node)) { node.forEach((n) => flattenPriceObjects(n, out)); return out; }
   const hasName = node.name || node.name_en || node.symbol || node.title;
   const hasPrice = node.price ?? node.value ?? node.close ?? node.Price;
-  if (hasName && hasPrice !== undefined) {
-    out.push(node);
-  }
-  Object.values(node).forEach((v) => {
-    if (v && typeof v === "object") flattenPriceObjects(v, out);
-  });
+  if (hasName && hasPrice !== undefined) out.push(node);
+  Object.values(node).forEach((v) => { if (v && typeof v === "object") flattenPriceObjects(v, out); });
   return out;
 }
 
@@ -89,9 +65,9 @@ function pick(obj, keys) {
   return undefined;
 }
 
-async function fetchJson(url) {
+async function fetchJson(url, opts) {
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", ...opts });
     if (!res.ok) throw new Error("HTTP " + res.status);
     return await res.json();
   } catch (err) {
@@ -100,80 +76,142 @@ async function fetchJson(url) {
   }
 }
 
-async function fetchBrsApi() {
-  let raw = await fetchJson(CONFIG.BRSAPI_FREE_URL);
-  if (raw) return raw;
-  if (CONFIG.BRSAPI_KEY && CONFIG.BRSAPI_KEY !== "YOUR_FREE_BRSAPI_KEY") {
-    raw = await fetchJson(`${CONFIG.BRSAPI_URL}?key=${encodeURIComponent(CONFIG.BRSAPI_KEY)}`);
-  }
-  return raw;
-}
-
-function applyBrsApi(raw) {
-  if (!raw) return;
-  const flat = flattenPriceObjects(raw);
-  const brsItems = SITE_ITEMS.filter((it) => it.source === "brsapi");
-
-  flat.forEach((entry) => {
-    const label = norm(pick(entry, ["name", "name_en", "symbol", "title"]));
-    const price = pick(entry, ["price", "value", "close", "Price"]);
-    const changeVal = pick(entry, ["change_value", "change", "d"]);
-    const changePct = pick(entry, ["change_percent", "changePercent", "dp"]);
-    if (!label || price === undefined) return;
-
-    const match = brsItems.find((it) =>
-      it.match.some((kw) => label.includes(norm(kw)))
-    );
-    if (!match) return;
-
-    setPrice(match.id, {
-      price: Number(price),
-      change: changeVal !== undefined ? Number(changeVal) : null,
-      changePercent: changePct !== undefined ? Number(changePct) : null,
-      unit: match.unit,
-      cat: match.cat,
-      updated: Date.now(),
-    });
+/* ==================== حالت ۱: Supabase ==================== */
+async function fetchSupabaseLatest() {
+  const url = `${CONFIG.SUPABASE_URL}/rest/v1/latest_prices?select=*`;
+  return fetchJson(url, {
+    headers: { apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
   });
 }
 
-/* ---------------- رمزارز: ۱۰۰ رمزارز برتر بازار، به‌صورت پویا -------- */
-let cryptoItemsRegistered = false;
-async function fetchCoinGeckoMarkets() {
-  const url = `${CONFIG.COINGECKO_MARKETS_URL}?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h`;
-  return fetchJson(url);
+async function fetchSupabaseHistory(itemId, limit) {
+  const url = `${CONFIG.SUPABASE_URL}/rest/v1/price_history?item_id=eq.${encodeURIComponent(itemId)}&select=price,created_at&order=created_at.asc&limit=${limit || 500}`;
+  const rows = await fetchJson(url, {
+    headers: { apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
+  });
+  if (!Array.isArray(rows)) return [];
+  return rows.map((r) => ({ t: new Date(r.created_at).getTime(), p: Number(r.price) }));
 }
 
-function applyCoinGeckoMarkets(raw) {
-  if (!raw || !Array.isArray(raw)) return;
+function applySupabaseRows(rows) {
+  if (!Array.isArray(rows)) return false;
   let itemsAdded = false;
-  raw.forEach((coin) => {
-    const id = "crypto-" + coin.id;
-    if (!SITE_ITEMS.some((it) => it.id === id)) {
-      SITE_ITEMS.push({
-        id,
-        cat: "crypto",
-        name: coin.name + (coin.symbol ? " (" + coin.symbol.toUpperCase() + ")" : ""),
-        unit: "دلار",
-        source: "coingecko-dynamic",
-      });
+  rows.forEach((row) => {
+    if (!SITE_ITEMS.some((it) => it.id === row.item_id)) {
+      SITE_ITEMS.push({ id: row.item_id, cat: row.category, name: row.name, unit: row.unit || "", source: "supabase" });
       itemsAdded = true;
     }
-    setPrice(id, {
-      price: coin.current_price,
-      change: coin.price_change_24h,
-      changePercent: coin.price_change_percentage_24h,
-      unit: "دلار",
-      cat: "crypto",
-      updated: Date.now(),
+    setPrice(row.item_id, {
+      price: row.price === null ? null : Number(row.price),
+      changePercent: row.change_percent === null ? null : Number(row.change_percent),
+      unit: row.unit,
+      cat: row.category,
+      updated: row.updated_at ? new Date(row.updated_at).getTime() : Date.now(),
     });
   });
-  if (itemsAdded) {
-    cryptoItemsRegistered = true;
-    document.dispatchEvent(new CustomEvent("items:updated"));
+  if (itemsAdded) document.dispatchEvent(new CustomEvent("items:updated"));
+  return rows.length > 0;
+}
+
+/* ==================== حالت ۲: اتصال مستقیم ==================== */
+/* منبع طلا/سکه/ارز: یک آینه‌ی رایگان و بدون‌کلید از داده‌ی Navasan که
+   هر ۱۰ دقیقه روی گیت‌هاب آپدیت می‌شود (ساختار JSON آن را از قبل دیده و
+   تأیید کرده‌ام، برخلاف BrsApi که مطمئن نبودم). چون روی
+   raw.githubusercontent.com است، معمولاً از ایران هم در دسترس است. */
+const NAVASAN_GOLD_URL = "https://raw.githubusercontent.com/HosseinOdd/Navasan-API/main/data/gold.json";
+const NAVASAN_FIAT_URL = "https://raw.githubusercontent.com/HosseinOdd/Navasan-API/main/data/fiat.json";
+
+// نگاشت مستقیم: کلید ما → کلید دقیق داخل gold.json (مقادیر آن «ریال»اند، تقسیم بر ۱۰ = تومان)
+const GOLD_KEY_MAP = {
+  "gold-18": "18ayar",
+  "gold-molten": "abshodeh",
+  "coin-emami": "sekkeh",
+  "coin-azadi": "bahar",
+  "coin-half": "nim",
+  "coin-quarter": "rob",
+  "coin-gerami": "gerami",
+};
+// نگاشت مستقیم برای ارزها: کلید ما = همان کد ارز کوچک، در fiat.json موجود است (مقدار «ریال» است)
+const CURRENCY_IDS = ["usd", "eur", "gbp", "chf", "aed", "try", "sar", "cny", "jpy", "rub", "cad", "aud"];
+
+async function fetchNavasan() {
+  const [gold, fiat] = await Promise.all([fetchJson(NAVASAN_GOLD_URL), fetchJson(NAVASAN_FIAT_URL)]);
+  return { gold, fiat };
+}
+
+function applyNavasan({ gold, fiat }) {
+  if (gold) {
+    Object.entries(GOLD_KEY_MAP).forEach(([ourId, srcKey]) => {
+      const row = gold[srcKey];
+      if (!row || typeof row.value !== "number") return;
+      const priceToman = row.value / 10;
+      setPrice(ourId, {
+        price: priceToman,
+        changePercent: row.change_pct || null,
+        unit: "تومان",
+        cat: ourId.startsWith("coin") ? "coin" : "gold",
+        updated: row.date ? row.date * 1000 : Date.now(),
+      });
+    });
+    // طلای ۲۴ و ۲۱ عیار و مثقال مستقیم در منبع نیستند؛ از روی طلای ۱۸ عیار
+    // واقعی، با فرمول استاندارد خلوص محاسبه می‌شوند (نه یک عدد ساختگی)
+    const g18 = PriceStore.data["gold-18"];
+    if (g18 && typeof g18.price === "number") {
+      setPrice("gold-24", { price: g18.price / 0.75, changePercent: g18.changePercent, unit: "تومان", cat: "gold", updated: g18.updated });
+      setPrice("gold-21", { price: g18.price * (21 / 18), changePercent: g18.changePercent, unit: "تومان", cat: "gold", updated: g18.updated });
+      setPrice("gold-mesghal", { price: g18.price * 4.6083, changePercent: g18.changePercent, unit: "تومان", cat: "gold", updated: g18.updated });
+    }
+    const xau = gold["usd_xau"];
+    if (xau && xau.value !== undefined) {
+      setPrice("gold-ounce", { price: Number(xau.value), changePercent: xau.change_pct || null, unit: "دلار", cat: "gold", updated: xau.date ? xau.date * 1000 : Date.now() });
+    }
+  }
+  if (fiat) {
+    CURRENCY_IDS.forEach((id) => {
+      const row = fiat[id];
+      if (!row || typeof row.value !== "number") return;
+      setPrice(id, {
+        price: row.value / 10,
+        changePercent: row.change_pct || null,
+        unit: "تومان",
+        cat: "currency",
+        updated: row.date ? row.date * 1000 : Date.now(),
+      });
+    });
   }
 }
 
+async function fetchNobitexAll() {
+  return fetchJson(CONFIG.NOBITEX_STATS_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({}),
+  });
+}
+
+function applyNobitexCrypto(raw) {
+  if (!raw || !raw.stats) return;
+  let itemsAdded = false;
+  Object.entries(raw.stats).forEach(([pair, s]) => {
+    if (!pair.endsWith("-usdt") || s.isClosed) return;
+    const symbol = pair.replace("-usdt", "").toUpperCase();
+    const price = Number(s.latest || s.bestSell || s.bestBuy);
+    if (!price) return;
+    const dayOpen = Number(s.dayOpen) || null;
+    const changePct = s.dayChange !== undefined && s.dayChange !== null
+      ? Number(s.dayChange)
+      : (dayOpen ? ((price - dayOpen) / dayOpen) * 100 : null);
+    const id = "crypto-" + symbol.toLowerCase();
+    if (!SITE_ITEMS.some((it) => it.id === id)) {
+      SITE_ITEMS.push({ id, cat: "crypto", name: symbol + "/USDT", unit: "دلار", source: "nobitex" });
+      itemsAdded = true;
+    }
+    setPrice(id, { price, changePercent: changePct, unit: "دلار", cat: "crypto", updated: Date.now() });
+  });
+  if (itemsAdded) document.dispatchEvent(new CustomEvent("items:updated"));
+}
+
+/* ==================== مشترک ==================== */
 function setPrice(id, info) {
   const prev = PriceStore.data[id];
   PriceStore.data[id] = { ...prev, ...info };
@@ -201,6 +239,18 @@ function getHistory(id) {
   } catch (e) { return []; }
 }
 
+/* تاریخچه‌ی یک آیتم را برمی‌گرداند: اگر Supabase وصل است از آنجا (واقعاً
+   چندروزه)، وگرنه از localStorage (فقط از الان به بعد) */
+async function loadItemHistory(id) {
+  if (isSupabaseConfigured()) {
+    try {
+      const rows = await fetchSupabaseHistory(id);
+      if (rows.length) return rows;
+    } catch (e) { console.error(e); }
+  }
+  return getHistory(id);
+}
+
 function loadCache() {
   try {
     const raw = JSON.parse(localStorage.getItem(CONFIG.CACHE_KEY) || "null");
@@ -212,9 +262,16 @@ function saveCache() {
 }
 
 async function refreshAllPrices() {
-  const [brs, cryptoMarkets] = await Promise.all([fetchBrsApi(), fetchCoinGeckoMarkets()]);
-  applyBrsApi(brs);
-  applyCoinGeckoMarkets(cryptoMarkets);
+  let handled = false;
+  if (isSupabaseConfigured()) {
+    const rows = await fetchSupabaseLatest();
+    if (applySupabaseRows(rows)) handled = true;
+  }
+  if (!handled) {
+    const [nav, nobitex] = await Promise.all([fetchNavasan(), fetchNobitexAll()]);
+    applyNavasan(nav);
+    applyNobitexCrypto(nobitex);
+  }
   PriceStore.ready = true;
   PriceStore.lastFetch = Date.now();
   saveCache();

@@ -143,8 +143,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---------------- نمودار زنده‌ی طلای ۱۸ عیار با تولتیپ دقیق ----------------
   let goldChart = null;
-  function goldChartData() {
-    const hist = getHistory("gold-18");
+  async function goldChartData() {
+    const hist = await loadItemHistory("gold-18");
     return {
       labels: hist.map(p => p.t),
       values: hist.map(p => p.p),
@@ -154,13 +154,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const d = new Date(ts);
     return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(d);
   }
-  function drawGoldChart() {
-    const { labels, values } = goldChartData();
+  async function drawGoldChart() {
+    const { labels, values } = await goldChartData();
     const noteEl = document.getElementById("gold-chart-note");
     if (labels.length < 2) {
-      noteEl.textContent = "نمودار همین حالا شروع به ثبت نقطه‌های واقعی قیمت کرد؛ هرچه سایت را بیشتر باز نگه دارید یا بیشتر سر بزنید، این روند کامل‌تر می‌شود.";
+      noteEl.textContent = isSupabaseConfigured()
+        ? "هنوز داده‌ی تاریخی کافی در Supabase ثبت نشده؛ کمی صبر کنید تا ربات گیت‌هاب چند بار قیمت را ثبت کند."
+        : "نمودار همین حالا شروع به ثبت نقطه‌های واقعی قیمت کرد؛ هرچه سایت را بیشتر باز نگه دارید یا بیشتر سر بزنید، این روند کامل‌تر می‌شود. برای نمودار چندروزه‌ی واقعی، Supabase را طبق README وصل کنید.";
     } else {
-      noteEl.textContent = "این نمودار از لحظه‌ای که این سایت روی مرورگر شما باز شده، قیمت‌های واقعی و دریافتی را ثبت می‌کند.";
+      noteEl.textContent = isSupabaseConfigured()
+        ? "این نمودار از تاریخچه‌ی واقعی و ذخیره‌شده در Supabase ساخته شده — برای همه‌ی بازدیدکننده‌ها یکسان است."
+        : "این نمودار از لحظه‌ای که این سایت روی مرورگر شما باز شده، قیمت‌های واقعی و دریافتی را ثبت می‌کند.";
     }
     const ctx = document.getElementById("gold-chart").getContext("2d");
     const goldColor = getComputedStyle(document.documentElement).getPropertyValue("--gold-1").trim() || "#d4af37";

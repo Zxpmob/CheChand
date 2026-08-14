@@ -30,7 +30,7 @@
   <section class="section" style="display:grid;grid-template-columns:2fr 1fr;gap:20px;" id="item-layout">
     <div>
       <div class="card glass" style="margin-bottom:20px;">
-        <h3 style="margin-top:0;font-size:.95rem;color:var(--text-1);">روند اخیر (بر اساس بازدیدهای شما از این صفحه)</h3>
+        <h3 style="margin-top:0;font-size:.95rem;color:var(--text-1);">روند اخیر</h3>
         <canvas id="item-chart" style="width:100%;height:220px;"></canvas>
       </div>
       <div class="card glass" id="item-alert-box">
@@ -104,8 +104,9 @@ document.addEventListener("DOMContentLoaded", () => {
     drawHead();
     document.addEventListener("prices:updated", drawHead);
 
-    function drawChart() {
-      drawSparkline(document.getElementById("item-chart"), getHistory(it.id), getComputedStyle(document.documentElement).getPropertyValue("--gold-1"));
+    async function drawChart() {
+      const hist = await loadItemHistory(it.id);
+      drawSparkline(document.getElementById("item-chart"), hist, getComputedStyle(document.documentElement).getPropertyValue("--gold-1"));
     }
     drawChart();
     document.addEventListener("prices:updated", drawChart);
