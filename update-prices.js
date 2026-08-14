@@ -47,7 +47,7 @@ async function getNavasanRows() {
   Object.entries(GOLD_KEY_MAP).forEach(([id, meta]) => {
     const row = gold[meta.key];
     if (!row || typeof row.value !== "number") return;
-    const price = row.value / 10; // ریال → تومان
+    const price = row.value; // مقدار Navasan از قبل به تومان است (نه ریال)
     const changePct = row.change_pct != null ? Number(row.change_pct) : null;
     if (id === "gold-18") { gold18Price = price; gold18Chg = changePct; }
     rows.push({ item_id: id, category: meta.cat, name: meta.name, unit: meta.unit, price, change_percent: changePct, updated_at: nowIso });
@@ -64,7 +64,7 @@ async function getNavasanRows() {
   Object.entries(CURRENCY_IDS).forEach(([id, name]) => {
     const row = fiat[id];
     if (!row || typeof row.value !== "number") return;
-    rows.push({ item_id: id, category: "currency", name, unit: "تومان", price: row.value / 10, change_percent: row.change_pct != null ? Number(row.change_pct) : null, updated_at: nowIso });
+    rows.push({ item_id: id, category: "currency", name, unit: "تومان", price: row.value, change_percent: row.change_pct != null ? Number(row.change_pct) : null, updated_at: nowIso });
   });
   return rows;
 }

@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260814e"></script>
+<script src="theme.js?v=20260814f"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>چی چند | قیمت لحظه‌ای طلا، دلار، سکه، ارز دیجیتال و بازار ایران</title>
 <meta name="description" content="قیمت لحظه‌ای و به‌روز طلا، سکه، دلار و ارزهای خارجی، بیت‌کوین و رمزارز، فلزات ارزشمند، سنگ‌های قیمتی، خودرو و اشیای کلکسیونی، با نمودار، مبدل واحد و هشدار قیمت.">
@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="style.css?v=20260814e">
+<link rel="stylesheet" href="style.css?v=20260814f">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
@@ -58,7 +58,9 @@
       <p class="desc">با نگه‌داشتن موس روی نمودار، تاریخ و ساعت دقیق و قیمت همان لحظه را ببینید.</p>
     </div>
     <div class="card glass" style="padding:22px 18px;">
-      <canvas id="gold-chart" style="width:100%;height:280px;"></canvas>
+      <div style="position:relative;width:100%;height:280px;">
+        <canvas id="gold-chart"></canvas>
+      </div>
       <div class="flex items-center gap-12" style="justify-content:space-between;flex-wrap:wrap;margin-top:14px;">
         <p class="text-dim" id="gold-chart-note" style="font-size:.76rem;margin:0;flex:1;min-width:220px;"></p>
         <button class="btn outline" id="gold-chart-reset" style="font-size:.78rem;padding:8px 16px;">بازنشانی نما</button>
@@ -122,12 +124,12 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260814e" defer></script>
-  <script src="data.js?v=20260814e" defer></script>
-  <script src="favorites.js?v=20260814e" defer></script>
-  <script src="alerts.js?v=20260814e" defer></script>
-  <script src="render.js?v=20260814e" defer></script>
-  <script src="components.js?v=20260814e" defer></script>
+  <script src="items.js?v=20260814f" defer></script>
+  <script src="data.js?v=20260814f" defer></script>
+  <script src="favorites.js?v=20260814f" defer></script>
+  <script src="alerts.js?v=20260814f" defer></script>
+  <script src="render.js?v=20260814f" defer></script>
+  <script src="components.js?v=20260814f" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {

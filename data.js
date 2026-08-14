@@ -27,8 +27,8 @@ const CONFIG = {
 
   REFRESH_MS: 60 * 1000,
   HISTORY_POINTS: 300,
-  CACHE_KEY: "nerkh_prices_v4",
-  HISTORY_KEY: "nerkh_history_v4",
+  CACHE_KEY: "nerkh_prices_v5",
+  HISTORY_KEY: "nerkh_history_v5",
 };
 
 function isSupabaseConfigured() {
@@ -157,9 +157,8 @@ function applyNavasan({ gold, fiat }) {
     Object.entries(GOLD_KEY_MAP).forEach(([ourId, srcKey]) => {
       const row = gold[srcKey];
       if (!row || typeof row.value !== "number") return;
-      const priceToman = row.value / 10;
       setPrice(ourId, {
-        price: priceToman,
+        price: row.value, // مقدار Navasan از قبل به تومان است (نه ریال)
         changePercent: row.change_pct || null,
         unit: "تومان",
         cat: ourId.startsWith("coin") ? "coin" : "gold",
@@ -184,7 +183,7 @@ function applyNavasan({ gold, fiat }) {
       const row = fiat[id];
       if (!row || typeof row.value !== "number") return;
       setPrice(id, {
-        price: row.value / 10,
+        price: row.value, // مقدار Navasan از قبل به تومان است (نه ریال)
         changePercent: row.change_pct || null,
         unit: "تومان",
         cat: "currency",
@@ -278,7 +277,7 @@ async function loadItemHistory(id) {
    یعنی خودِ تاریخچه‌ی commit های آن مخزن، یک آرشیو واقعی از قیمت طلا در
    طول زمان است. اینجا آن تاریخچه را (فقط یک‌بار، برای همیشه در مرورگر
    کاربر ذخیره می‌شود) می‌خوانیم — بدون نیاز به هیچ دیتابیسی. */
-const GOLD_BACKFILL_FLAG = "nerkh_gold_backfill_done_v1";
+const GOLD_BACKFILL_FLAG = "nerkh_gold_backfill_done_v2";
 const GOLD_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/gold.json&per_page=100";
 
 async function runWithLimit(tasks, limit) {
@@ -309,7 +308,7 @@ async function backfillGoldHistoryFromGitHub(onProgress) {
       if (!raw || !date) return null;
       const row = raw["18ayar"];
       if (!row || typeof row.value !== "number") return null;
-      return { t: date, p: row.value / 10 };
+      return { t: date, p: row.value };
     });
 
     const points = (await runWithLimit(tasks, 8)).filter(Boolean);
