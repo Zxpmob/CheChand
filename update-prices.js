@@ -15,7 +15,7 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const GOLD_URL = "https://raw.githubusercontent.com/HosseinOdd/Navasan-API/main/data/gold.json";
 const FIAT_URL = "https://raw.githubusercontent.com/HosseinOdd/Navasan-API/main/data/fiat.json";
 
-// نگاشت مستقیم و تأییدشده به کلیدهای دقیق داخل gold.json (مقادیر «ریال»اند)
+// نگاشت مستقیم و تأییدشده به کلیدهای دقیق داخل gold.json (مقادیر «تومان»اند)
 const GOLD_KEY_MAP = {
   "gold-18": { cat: "gold", name: "طلای ۱۸ عیار (هر گرم)", unit: "تومان", key: "18ayar" },
   "gold-molten": { cat: "gold", name: "طلای آب‌شده (نقدی)", unit: "تومان", key: "abshodeh" },
@@ -24,12 +24,30 @@ const GOLD_KEY_MAP = {
   "coin-half": { cat: "coin", name: "نیم‌سکه", unit: "تومان", key: "nim" },
   "coin-quarter": { cat: "coin", name: "ربع‌سکه", unit: "تومان", key: "rob" },
   "coin-gerami": { cat: "coin", name: "سکه گرمی", unit: "تومان", key: "gerami" },
+  "coin-emami-bubble": { cat: "coin", name: "حباب سکه امامی", unit: "تومان", key: "bub_sekkeh" },
+  "coin-azadi-bubble": { cat: "coin", name: "حباب سکه بهار آزادی", unit: "تومان", key: "bub_bahar" },
+  "coin-half-bubble": { cat: "coin", name: "حباب نیم‌سکه", unit: "تومان", key: "bub_nim" },
+  "coin-quarter-bubble": { cat: "coin", name: "حباب ربع‌سکه", unit: "تومان", key: "bub_rob" },
+  "coin-gerami-bubble": { cat: "coin", name: "حباب سکه گرمی", unit: "تومان", key: "bub_gerami" },
 };
-const CURRENCY_IDS = {
+// نام فارسیِ هرچه بیشتر کدهای ارزی؛ هر کد دیگری که منبع بدهد و اینجا
+// نامش را نداشته باشیم هم با کد لاتین خودش ثبت می‌شود (حذف نمی‌شود).
+const CURRENCY_NAMES = {
   usd: "دلار آمریکا", eur: "یورو", gbp: "پوند انگلیس", chf: "فرانک سوئیس",
-  aed: "درهم امارات", try: "لیر ترکیه", sar: "ریال عربستان", cny: "یوان چین",
-  jpy: "ین ژاپن", rub: "روبل روسیه", cad: "دلار کانادا", aud: "دلار استرالیا",
+  aed: "درهم امارات", aed_note: "درهم امارات (اسکناس)", try: "لیر ترکیه",
+  sar: "ریال عربستان", cny: "یوان چین", jpy: "ین ژاپن", rub: "روبل روسیه",
+  cad: "دلار کانادا", aud: "دلار استرالیا", nzd: "دلار نیوزیلند",
+  sgd: "دلار سنگاپور", pkr: "روپیه پاکستان", azn: "منات آذربایجان",
+  nok: "کرون نروژ", sek: "کرون سوئد", dkk: "کرون دانمارک", kwd: "دینار کویت",
+  omr: "ریال عمان", bhd: "دینار بحرین", qar: "ریال قطر", iqd: "دینار عراق",
+  brl: "رئال برزیل", thb: "بات تایلند", afn: "افغانی افغانستان",
+  inr: "روپیه هند", myr: "رینگیت مالزی", gel: "لاری گرجستان",
+  amd: "درام ارمنستان", kzt: "تنگه قزاقستان", eur_hav: "یورو (حواله)",
+  gbp_hav: "پوند (حواله)", aud_hav: "دلار استرالیا (حواله)",
+  cny_hav: "یوان چین (حواله)", try_hav: "لیر ترکیه (حواله)",
+  jpy_hav: "ین ژاپن (حواله)", myr_hav: "رینگیت مالزی (حواله)",
 };
+const CURRENCY_SKIP = new Set(["usd_sherkat", "usd_shakhs", "hav_cad_cheque"]);
 
 async function fetchJson(url, opts) {
   const res = await fetch(url, opts);
@@ -73,11 +91,21 @@ async function getNavasanRows() {
   if (xau && xau.value !== undefined) {
     rows.push({ item_id: "gold-ounce", category: "gold", name: "انس جهانی طلا", unit: "دلار", price: Number(xau.value), change_percent: extractChangePercent(xau), updated_at: nowIso });
   }
-  Object.entries(CURRENCY_IDS).forEach(([id, name]) => {
+  Object.entries(CURRENCY_NAMES).forEach(([id, name]) => {
+    if (CURRENCY_SKIP.has(id)) return;
     const row = fiat[id];
     if (!row || typeof row.value !== "number") return;
     rows.push({ item_id: id, category: "currency", name, unit: "تومان", price: row.value, change_percent: extractChangePercent(row), updated_at: nowIso });
   });
+  // هر کد ارزی دیگری هم که منبع داشته باشد و در CURRENCY_NAMES نباشد،
+  // با کد لاتین خودش ثبت می‌شود — هیچ ارزی از قلم نمی‌افتد.
+  if (fiat) {
+    Object.entries(fiat).forEach(([id, row]) => {
+      if (CURRENCY_SKIP.has(id) || CURRENCY_NAMES[id] !== undefined) return;
+      if (!row || typeof row.value !== "number") return;
+      rows.push({ item_id: id, category: "currency", name: id.toUpperCase(), unit: "تومان", price: row.value, change_percent: extractChangePercent(row), updated_at: nowIso });
+    });
+  }
   return rows;
 }
 

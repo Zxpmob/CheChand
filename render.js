@@ -17,14 +17,14 @@ function priceCardHTML(it) {
   }
   const fav = isFavorite(it.id);
   return `
-    <a class="price-card glass" href="item.html?id=${it.id}" data-id="${it.id}">
+    <div class="price-card glass" data-id="${it.id}">
       <div class="pc-top">
         <span class="pc-name">${it.name}</span>
-        <button class="fav-btn ${fav ? "active" : ""}" data-fav="${it.id}" aria-label="افزودن به علاقه‌مندی‌ها" onclick="event.preventDefault();event.stopPropagation();handleFavClick('${it.id}', this)">${fav ? ICONS.starFill : ICONS.star}</button>
+        <button class="fav-btn ${fav ? "active" : ""}" data-fav="${it.id}" aria-label="افزودن به علاقه‌مندی‌ها" onclick="handleFavClick('${it.id}', this)">${fav ? ICONS.starFill : ICONS.star}</button>
       </div>
       <div class="pc-price">${price} <span class="pc-unit">${it.unit}</span></div>
       <div class="pc-bottom">${chgTxt}${d ? `<span class="pc-updated">${timeAgo(d.updated)}</span>` : ""}</div>
-    </a>`;
+    </div>`;
 }
 
 function handleFavClick(id, btn) {
@@ -102,12 +102,12 @@ function renderAllPricesTable(containerId, filterText, filterCat) {
     const d = PriceStore.data[it.id];
     const chg = d ? d.changePercent : null;
     const chgClass = chg > 0 ? "up" : chg < 0 ? "down" : "";
-    return `<tr onclick="location.href='item.html?id=${it.id}'" style="cursor:pointer;">
+    return `<tr>
       <td>${it.name}</td>
       <td>${cat ? cat.title : ""}</td>
       <td class="num">${d ? formatPrice(d.price) : "—"} <span class="text-dim">${it.unit}</span></td>
       <td class="num ${chgClass}">${chg === null || chg === undefined || Number.isNaN(chg) ? "—" : (chg > 0 ? "▲ " : chg < 0 ? "▼ " : "") + Math.abs(chg).toFixed(2) + "٪"}</td>
-      <td><button class="fav-btn ${isFavorite(it.id) ? "active" : ""}" onclick="event.stopPropagation();handleFavClick('${it.id}', this)">${isFavorite(it.id) ? ICONS.starFill : ICONS.star}</button></td>
+      <td><button class="fav-btn ${isFavorite(it.id) ? "active" : ""}" onclick="handleFavClick('${it.id}', this)">${isFavorite(it.id) ? ICONS.starFill : ICONS.star}</button></td>
     </tr>`;
   }).join("");
 
@@ -143,11 +143,11 @@ function renderMovers(gainersId, losersId) {
   const gainers = withChg.slice().sort((a, b) => b.d.changePercent - a.d.changePercent).slice(0, 8);
   const losers = withChg.slice().sort((a, b) => a.d.changePercent - b.d.changePercent).slice(0, 8);
   const gEl = document.getElementById(gainersId), lEl = document.getElementById(losersId);
-  const row = (x, cls) => `<a class="price-card glass" href="item.html?id=${x.it.id}">
+  const row = (x, cls) => `<div class="price-card glass">
       <div class="pc-top"><span class="pc-name">${x.it.name}</span></div>
       <div class="pc-price">${formatPrice(x.d.price)} <span class="pc-unit">${x.it.unit}</span></div>
       <div class="pc-bottom"><span class="pc-chg ${cls}">${cls === "up" ? "▲" : "▼"} ${Math.abs(x.d.changePercent).toFixed(2)}٪</span></div>
-    </a>`;
+    </div>`;
   if (gEl) gEl.innerHTML = gainers.length ? gainers.map((x) => row(x, "up")).join("") : `<div class="empty-state">هنوز داده‌ی کافی نیست.</div>`;
   if (lEl) lEl.innerHTML = losers.length ? losers.map((x) => row(x, "down")).join("") : `<div class="empty-state">هنوز داده‌ی کافی نیست.</div>`;
 }

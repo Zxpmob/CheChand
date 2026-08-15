@@ -186,7 +186,7 @@ function wireSearchInput(inputEl, suggestEl, onSubmitGo) {
       suggestEl.innerHTML = results.map((it) => {
         const cat = SITE_CATEGORIES.find((c) => c.id === it.cat);
         const price = PriceStore.data[it.id] ? formatPrice(PriceStore.data[it.id].price) + " " + it.unit : "—";
-        return `<a href="item.html?id=${it.id}"><span>${it.name}</span><span class="s-cat">${cat ? cat.title : ""} · ${price}</span></a>`;
+        return `<div><span>${it.name}</span><span class="s-cat">${cat ? cat.title : ""} · ${price}</span></div>`;
       }).join("");
     }
     suggestEl.classList.add("open");

@@ -130,22 +130,51 @@ function applySupabaseRows(rows) {
 /* منبع طلا/سکه/ارز: یک آینه‌ی رایگان و بدون‌کلید از داده‌ی Navasan که
    هر ۳۰ دقیقه روی گیت‌هاب آپدیت می‌شود (ساختار JSON آن را از قبل دیده و
    تأیید کرده‌ام). چون روی raw.githubusercontent.com است، معمولاً از
-   ایران هم در دسترس است. */
+   ایران هم در دسترس است.
+
+   طلا/سکه و ارز، هیچ‌کدام دیگر «لیست ثابت» ندارند: هر کلیدی که واقعاً در
+   پاسخ منبع دیده شود، همان لحظه به SITE_ITEMS اضافه و قیمتش ثبت می‌شود؛
+   هر کلیدی که نباشد، اصلاً کارتی برایش ساخته نمی‌شود. این‌طور هیچ کارتِ
+   خالی یا برای‌همیشه در حال بارگذاری روی سایت نمی‌ماند. */
 const NAVASAN_GOLD_URL = "https://raw.githubusercontent.com/HosseinOdd/Navasan-API/main/data/gold.json";
 const NAVASAN_FIAT_URL = "https://raw.githubusercontent.com/HosseinOdd/Navasan-API/main/data/fiat.json";
 
-// نگاشت مستقیم: کلید ما → کلید دقیق داخل gold.json (مقادیر آن از قبل «تومان»اند)
+// کلیدهای طلا/سکه‌ای که از منبع می‌شناسیم، به همراه نام فارسی و دسته‌شان
 const GOLD_KEY_MAP = {
-  "gold-18": "18ayar",
-  "gold-molten": "abshodeh",
-  "coin-emami": "sekkeh",
-  "coin-azadi": "bahar",
-  "coin-half": "nim",
-  "coin-quarter": "rob",
-  "coin-gerami": "gerami",
+  "18ayar":     { id: "gold-18",           name: "طلای ۱۸ عیار (هر گرم)",     cat: "gold" },
+  "abshodeh":   { id: "gold-molten",       name: "طلای آب‌شده (نقدی)",        cat: "gold" },
+  "sekkeh":     { id: "coin-emami",        name: "سکه امامی",                 cat: "coin" },
+  "bahar":      { id: "coin-azadi",        name: "سکه بهار آزادی",            cat: "coin" },
+  "nim":        { id: "coin-half",         name: "نیم‌سکه",                   cat: "coin" },
+  "rob":        { id: "coin-quarter",      name: "ربع‌سکه",                   cat: "coin" },
+  "gerami":     { id: "coin-gerami",       name: "سکه گرمی",                  cat: "coin" },
+  "bub_sekkeh": { id: "coin-emami-bubble", name: "حباب سکه امامی",            cat: "coin" },
+  "bub_bahar":  { id: "coin-azadi-bubble", name: "حباب سکه بهار آزادی",       cat: "coin" },
+  "bub_nim":    { id: "coin-half-bubble",  name: "حباب نیم‌سکه",              cat: "coin" },
+  "bub_rob":    { id: "coin-quarter-bubble", name: "حباب ربع‌سکه",            cat: "coin" },
+  "bub_gerami": { id: "coin-gerami-bubble", name: "حباب سکه گرمی",            cat: "coin" },
 };
-// نگاشت مستقیم برای ارزها: کلید ما = همان کد ارز کوچک، در fiat.json موجود است (مقدار «تومان» است)
-const CURRENCY_IDS = ["usd", "eur", "gbp", "chf", "aed", "try", "sar", "cny", "jpy", "rub", "cad", "aud"];
+
+// نام فارسیِ هرچه بیشتر کدهای ارزی که Navasan معمولاً می‌دهد؛ هر کد دیگری
+// هم که در پاسخ باشد و اینجا نامش را نداشته باشیم، با همان کد لاتین نشان
+// داده می‌شود (نه حذف) — یعنی هیچ ارزی که منبع دارد از قلم نمی‌افتد.
+const CURRENCY_NAMES = {
+  usd: "دلار آمریکا", eur: "یورو", gbp: "پوند انگلیس", chf: "فرانک سوئیس",
+  aed: "درهم امارات", aed_note: "درهم امارات (اسکناس)", try: "لیر ترکیه",
+  sar: "ریال عربستان", cny: "یوان چین", jpy: "ین ژاپن", rub: "روبل روسیه",
+  cad: "دلار کانادا", aud: "دلار استرالیا", nzd: "دلار نیوزیلند",
+  sgd: "دلار سنگاپور", pkr: "روپیه پاکستان", azn: "منات آذربایجان",
+  nok: "کرون نروژ", sek: "کرون سوئد", dkk: "کرون دانمارک", kwd: "دینار کویت",
+  omr: "ریال عمان", bhd: "دینار بحرین", qar: "ریال قطر", iqd: "دینار عراق",
+  brl: "رئال برزیل", thb: "بات تایلند", afn: "افغانی افغانستان",
+  inr: "روپیه هند", myr: "رینگیت مالزی", gel: "لاری گرجستان",
+  amd: "درام ارمنستان", kzt: "تنگه قزاقستان", eur_hav: "یورو (حواله)",
+  gbp_hav: "پوند (حواله)", aud_hav: "دلار استرالیا (حواله)",
+  cny_hav: "یوان چین (حواله)", try_hav: "لیر ترکیه (حواله)",
+  jpy_hav: "ین ژاپن (حواله)", myr_hav: "رینگیت مالزی (حواله)",
+};
+// کدهایی که عمداً نمایش نمی‌دهیم چون تکراری/گمراه‌کننده‌اند (نرخ شرکتی و مشابه)
+const CURRENCY_SKIP = new Set(["usd_sherkat", "usd_shakhs", "hav_cad_cheque"]);
 
 // درصد تغییر ممکن است زیر نام‌های مختلفی در منبع باشد؛ همه را امتحان می‌کنیم
 // تا به‌جای خالی‌ماندن، واقعاً مقدارش را پیدا کنیم.
@@ -160,21 +189,32 @@ function extractChangePercent(row) {
   return null;
 }
 
+function ensureItem(id, cat, name, unit) {
+  if (!SITE_ITEMS.some((it) => it.id === id)) {
+    SITE_ITEMS.push({ id, cat, name, unit });
+    return true;
+  }
+  return false;
+}
+
 async function fetchNavasan() {
   const [gold, fiat] = await Promise.all([fetchJson(NAVASAN_GOLD_URL), fetchJson(NAVASAN_FIAT_URL)]);
   return { gold, fiat };
 }
 
 function applyNavasan({ gold, fiat }) {
+  let itemsAdded = false;
+
   if (gold) {
-    Object.entries(GOLD_KEY_MAP).forEach(([ourId, srcKey]) => {
+    Object.entries(GOLD_KEY_MAP).forEach(([srcKey, meta]) => {
       const row = gold[srcKey];
       if (!row || typeof row.value !== "number") return;
-      setPrice(ourId, {
+      if (ensureItem(meta.id, meta.cat, meta.name, "تومان")) itemsAdded = true;
+      setPrice(meta.id, {
         price: row.value, // مقدار Navasan از قبل به تومان است (نه ریال)
         changePercent: extractChangePercent(row),
         unit: "تومان",
-        cat: ourId.startsWith("coin") ? "coin" : "gold",
+        cat: meta.cat,
         updated: row.date ? row.date * 1000 : Date.now(),
       });
     });
@@ -182,20 +222,27 @@ function applyNavasan({ gold, fiat }) {
     // واقعی، با فرمول استاندارد خلوص محاسبه می‌شوند (نه یک عدد ساختگی)
     const g18 = PriceStore.data["gold-18"];
     if (g18 && typeof g18.price === "number") {
+      if (ensureItem("gold-24", "gold", "طلای ۲۴ عیار (هر گرم)", "تومان")) itemsAdded = true;
+      if (ensureItem("gold-21", "gold", "طلای ۲۱ عیار (هر گرم)", "تومان")) itemsAdded = true;
+      if (ensureItem("gold-mesghal", "gold", "هر مثقال طلا", "تومان")) itemsAdded = true;
       setPrice("gold-24", { price: g18.price / 0.75, changePercent: g18.changePercent, unit: "تومان", cat: "gold", updated: g18.updated });
       setPrice("gold-21", { price: g18.price * (21 / 18), changePercent: g18.changePercent, unit: "تومان", cat: "gold", updated: g18.updated });
       setPrice("gold-mesghal", { price: g18.price * 4.6083, changePercent: g18.changePercent, unit: "تومان", cat: "gold", updated: g18.updated });
     }
     const xau = gold["usd_xau"];
     if (xau && xau.value !== undefined) {
+      if (ensureItem("gold-ounce", "gold", "انس جهانی طلا", "دلار")) itemsAdded = true;
       setPrice("gold-ounce", { price: Number(xau.value), changePercent: extractChangePercent(xau), unit: "دلار", cat: "gold", updated: xau.date ? xau.date * 1000 : Date.now() });
     }
   }
+
   if (fiat) {
-    CURRENCY_IDS.forEach((id) => {
-      const row = fiat[id];
+    Object.entries(fiat).forEach(([key, row]) => {
+      if (CURRENCY_SKIP.has(key)) return;
       if (!row || typeof row.value !== "number") return;
-      setPrice(id, {
+      const name = CURRENCY_NAMES[key] || key.toUpperCase();
+      if (ensureItem(key, "currency", name, "تومان")) itemsAdded = true;
+      setPrice(key, {
         price: row.value, // مقدار Navasan از قبل به تومان است (نه ریال)
         changePercent: extractChangePercent(row),
         unit: "تومان",
@@ -204,6 +251,8 @@ function applyNavasan({ gold, fiat }) {
       });
     });
   }
+
+  if (itemsAdded) document.dispatchEvent(new CustomEvent("items:updated"));
 }
 
 /* رمزارز در «حالت مستقیم»: Nobitex از اینجا کار نمی‌کند چون API آن برای

@@ -304,14 +304,13 @@ button, input, select { font-family: inherit; color: inherit; }
   display: none;
 }
 .search-suggest.open { display: block; }
-.search-suggest a {
+.search-suggest div {
   display: flex; justify-content: space-between; gap: 10px;
   padding: 10px 14px;
   font-size: .86rem;
   border-bottom: 1px solid var(--glass-border);
 }
-.search-suggest a:last-child { border-bottom: none; }
-.search-suggest a:hover { background: var(--gold-soft); }
+.search-suggest div:last-child { border-bottom: none; }
 .search-suggest .s-cat { color: var(--text-2); font-size: .74rem; }
 
 /* ============================= هیرو ============================= */
