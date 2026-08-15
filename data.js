@@ -25,7 +25,7 @@ const CONFIG = {
   // --- حالت ۲: اتصال مستقیم (بدون نیاز به هیچ تنظیمی از پیش کار می‌کند) ---
   NOBITEX_STATS_URL: "https://api.nobitex.ir/market/stats",
 
-  REFRESH_MS: 60 * 1000,
+  REFRESH_MS: 20 * 1000, // هر ۲۰ ثانیه یک‌بار بررسی می‌کنیم؛ سریع‌ترین بازه‌ای که بدون فشار زیاد به منبع رایگان معقول است
   HISTORY_POINTS: 300,
   CACHE_KEY: "nerkh_prices_v5",
   HISTORY_KEY: "nerkh_history_v5",
@@ -215,7 +215,7 @@ function applyNavasan({ gold, fiat }) {
         changePercent: extractChangePercent(row),
         unit: "تومان",
         cat: meta.cat,
-        updated: row.date ? row.date * 1000 : Date.now(),
+        updated: Date.now(), // زمان بررسیِ ما، نه زمان داخلی منبع — تا نمای «چند ثانیه پیش» واقعاً به‌روز بماند
       });
     });
     // طلای ۲۴ و ۲۱ عیار و مثقال مستقیم در منبع نیستند؛ از روی طلای ۱۸ عیار
@@ -232,7 +232,7 @@ function applyNavasan({ gold, fiat }) {
     const xau = gold["usd_xau"];
     if (xau && xau.value !== undefined) {
       if (ensureItem("gold-ounce", "gold", "انس جهانی طلا", "دلار")) itemsAdded = true;
-      setPrice("gold-ounce", { price: Number(xau.value), changePercent: extractChangePercent(xau), unit: "دلار", cat: "gold", updated: xau.date ? xau.date * 1000 : Date.now() });
+      setPrice("gold-ounce", { price: Number(xau.value), changePercent: extractChangePercent(xau), unit: "دلار", cat: "gold", updated: Date.now() });
     }
   }
 
@@ -247,7 +247,7 @@ function applyNavasan({ gold, fiat }) {
         changePercent: extractChangePercent(row),
         unit: "تومان",
         cat: "currency",
-        updated: row.date ? row.date * 1000 : Date.now(),
+        updated: Date.now(), // زمان بررسیِ ما، نه زمان داخلی منبع — تا نمای «چند ثانیه پیش» واقعاً به‌روز بماند
       });
     });
   }
@@ -261,10 +261,14 @@ function applyNavasan({ gold, fiat }) {
    Nobitex فقط داخل update-prices.js (که سمت سرور اجرا می‌شود، نه توی
    مرورگر) قابل استفاده است. برای حالت مستقیم از CoinGecko استفاده
    می‌کنیم که صراحتاً برای فراخوانی مستقیم از مرورگر ساخته شده. */
-const COINGECKO_MARKETS_URL = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&price_change_percentage=24h";
+const COINGECKO_MARKETS_URL = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=24h";
 
 async function fetchCoinGeckoMarkets() {
-  return fetchJson(COINGECKO_MARKETS_URL);
+  const [p1, p2] = await Promise.all([
+    fetchJson(COINGECKO_MARKETS_URL + "&page=1"),
+    fetchJson(COINGECKO_MARKETS_URL + "&page=2"),
+  ]);
+  return [...(p1 || []), ...(p2 || [])];
 }
 
 function applyCoinGeckoMarkets(raw) {
@@ -328,7 +332,7 @@ async function loadItemHistory(id) {
       const rows = await fetchSupabaseHistory(id);
       if (rows.length) return rows;
     } catch (e) { console.error(e); }
-  } else if (id === "gold-18") {
+  } else if (id === "gold-ounce") {
     await backfillGoldHistoryFromGitHub();
   }
   return getHistory(id);
@@ -339,7 +343,7 @@ async function loadItemHistory(id) {
    یعنی خودِ تاریخچه‌ی commit های آن مخزن، یک آرشیو واقعی از قیمت طلا در
    طول زمان است. اینجا آن تاریخچه را (فقط یک‌بار، برای همیشه در مرورگر
    کاربر ذخیره می‌شود) می‌خوانیم — بدون نیاز به هیچ دیتابیسی. */
-const GOLD_BACKFILL_FLAG = "nerkh_gold_backfill_done_v2";
+const GOLD_BACKFILL_FLAG = "nerkh_gold_backfill_done_v3";
 const GOLD_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/gold.json&per_page=100";
 
 async function runWithLimit(tasks, limit) {
@@ -368,13 +372,13 @@ async function backfillGoldHistoryFromGitHub(onProgress) {
       const date = c.commit && c.commit.committer ? new Date(c.commit.committer.date).getTime() : null;
       const raw = await fetchJson(`https://raw.githubusercontent.com/HosseinOdd/Navasan-API/${sha}/data/gold.json`);
       if (!raw || !date) return null;
-      const row = raw["18ayar"];
-      if (!row || typeof row.value !== "number") return null;
-      return { t: date, p: row.value };
+      const row = raw["usd_xau"];
+      if (!row || row.value === undefined) return null;
+      return { t: date, p: Number(row.value) };
     });
 
     const points = (await runWithLimit(tasks, 8)).filter(Boolean);
-    points.forEach((pt) => pushHistory("gold-18", pt.p, pt.t));
+    points.forEach((pt) => pushHistory("gold-ounce", pt.p, pt.t));
     localStorage.setItem(GOLD_BACKFILL_FLAG, "1");
     if (onProgress) onProgress(points.length);
     return points.length > 0;

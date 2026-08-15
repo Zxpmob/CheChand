@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260815a"></script>
+<script src="theme.js?v=20260815c"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>چی چند | قیمت لحظه‌ای طلا، دلار، سکه، ارز دیجیتال و بازار ایران</title>
 <meta name="description" content="قیمت لحظه‌ای و به‌روز طلا، سکه، دلار و ارزهای خارجی، بیت‌کوین و رمزارز، فلزات ارزشمند، سنگ‌های قیمتی، خودرو و اشیای کلکسیونی، با نمودار، مبدل واحد و هشدار قیمت.">
@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="style.css?v=20260815a">
+<link rel="stylesheet" href="style.css?v=20260815c">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
@@ -54,10 +54,11 @@
 
   <section class="section">
     <div class="section-head">
-      <h2>روند قیمت طلای ۱۸ عیار</h2>
-      <p class="desc">با نگه‌داشتن موس روی نمودار، تاریخ و ساعت دقیق و قیمت همان لحظه را ببینید.</p>
+      <h2>روند قیمت انس جهانی طلا</h2>
+      <p class="desc">با نگه‌داشتن موس روی نمودار، تاریخ و قیمت دقیق را ببینید.</p>
     </div>
     <div class="card glass" style="padding:22px 18px;">
+      <div class="flex gap-8" id="gold-chart-pills" style="margin-bottom:14px;flex-wrap:wrap;"></div>
       <div style="position:relative;width:100%;height:280px;">
         <canvas id="gold-chart"></canvas>
       </div>
@@ -124,12 +125,13 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260815a" defer></script>
-  <script src="data.js?v=20260815a" defer></script>
-  <script src="favorites.js?v=20260815a" defer></script>
-  <script src="alerts.js?v=20260815a" defer></script>
-  <script src="render.js?v=20260815a" defer></script>
-  <script src="components.js?v=20260815a" defer></script>
+  <script src="items.js?v=20260815c" defer></script>
+  <script src="gold-history-usd.js?v=20260815c" defer></script>
+  <script src="data.js?v=20260815c" defer></script>
+  <script src="favorites.js?v=20260815c" defer></script>
+  <script src="alerts.js?v=20260815c" defer></script>
+  <script src="render.js?v=20260815c" defer></script>
+  <script src="components.js?v=20260815c" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {
@@ -147,10 +149,10 @@ document.addEventListener("DOMContentLoaded", () => {
     location.href = "search.html?q=" + encodeURIComponent(document.getElementById("hero-search-input").value);
   });
 
-  // ---------------- نمودار زنده‌ی طلای ۱۸ عیار با تاریخچه‌ی واقعی و کشیدن با موس ----------------
+  // ---------------- نمودار انس جهانی طلا: زنده / چندساله دلار / چندساله تومان ----------------
   let goldChart = null;
   async function goldChartPoints() {
-    const hist = await loadItemHistory("gold-18");
+    const hist = await loadItemHistory("gold-ounce");
     return hist.map(p => ({ x: p.t, y: p.p }));
   }
   function fmtDateTime(ts) {
@@ -161,41 +163,76 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (window.ChartZoom) { try { Chart.register(window.ChartZoom); } catch (e) {} }
 
+  let chartMode = "recent"; // "recent" | "usd" | "toman"
+  const pillsEl = document.getElementById("gold-chart-pills");
+  function drawPills() {
+    const modes = [
+      { id: "recent", label: "بازه‌ی اخیر (زنده)" },
+      { id: "usd", label: "چند سال گذشته (دلار)" },
+      { id: "toman", label: "چند سال گذشته (تومان، تقریبی)" },
+    ];
+    pillsEl.innerHTML = modes.map(m => `<button class="pill" data-m="${m.id}" aria-pressed="${m.id === chartMode}">${m.label}</button>`).join("");
+    pillsEl.querySelectorAll(".pill").forEach(b => b.addEventListener("click", () => {
+      chartMode = b.dataset.m;
+      drawPills();
+      drawGoldChart();
+    }));
+  }
+  drawPills();
+
   async function drawGoldChart() {
-    const points = await goldChartPoints();
     const noteEl = document.getElementById("gold-chart-note");
 
     if (typeof Chart === "undefined") {
       noteEl.innerHTML = '<span style="color:var(--danger);">نمودار بارگذاری نشد — احتمالاً کتابخانه‌ی نمودار (از یک CDN خارجی) از دسترس شما مسدود است. بقیه‌ی سایت باید سالم کار کند.</span>';
       return;
     }
-    if (points.length < 2) {
-      noteEl.textContent = isSupabaseConfigured()
-        ? "هنوز داده‌ی تاریخی کافی در Supabase ثبت نشده؛ کمی صبر کنید تا ربات گیت‌هاب چند بار قیمت را ثبت کند."
-        : "در حال بارگذاری تاریخچه‌ی واقعی طلا (از خودِ منبع داده)… چند ثانیه صبر کنید.";
+
+    let points, label, unit, tickFmt, titleFmt;
+    if (chartMode === "usd") {
+      points = GOLD_ANNUAL_USD.map(r => ({ x: new Date(r.y, 0, 1).getTime(), y: r.p }));
+      label = "میانگین سالانه‌ی انس جهانی طلا (دلار)";
+      unit = "دلار";
+      tickFmt = (v) => new Date(v).getFullYear();
+      titleFmt = (v) => new Date(v).getFullYear();
+      noteEl.textContent = "میانگین سالانه‌ی قیمت جهانی طلا (انس، به دلار) از سال ۲۰۰۶ تاکنون — دیتای واقعی و مستند (منبع: Kitco/LBMA). مقدار ۲۰۲۶ چون سال هنوز تمام نشده، آخرین قیمت شناخته‌شده است، نه میانگین کامل سال.";
+    } else if (chartMode === "toman") {
+      points = GOLD_ANNUAL_TOMAN.map(r => ({ x: new Date(r.y, 0, 1).getTime(), y: r.p }));
+      label = "انس جهانی طلا به نرخ آزاد دلار همان سال (تومان، تقریبی)";
+      unit = "تومان";
+      tickFmt = (v) => new Date(v).getFullYear();
+      titleFmt = (v) => new Date(v).getFullYear();
+      noteEl.innerHTML = '<span style="color:var(--gold-0);">⚠ تقریبی است:</span> چون هیچ منبع رسمی و رایگانی برای «میانگین سالانه‌ی دقیق نرخ دلار» در همه‌ی این سال‌ها وجود ندارد، این نمودار از ضرب قیمت جهانی طلا در یک تخمین از نرخ آزاد دلار همان سال ساخته شده — روند کلی را درست نشان می‌دهد، ولی عدد دقیق هر سال را نه.';
     } else {
-      noteEl.textContent = "با نگه‌داشتن موس روی نمودار، تاریخ و قیمت دقیق همان لحظه را می‌بینید. با کشیدن (درگ) به چپ/راست یا اسکرول، تاریخ‌های قدیم‌تر یا جدیدتر را ببینید — برای بازگشت به حالت اول، دکمه‌ی «بازنشانی نما» را بزنید.";
+      points = await goldChartPoints();
+      label = "انس جهانی طلا (دلار)";
+      unit = "دلار";
+      tickFmt = (v) => fmtShort(v);
+      titleFmt = (v) => fmtDateTime(v);
+      if (points.length < 2) {
+        noteEl.textContent = isSupabaseConfigured()
+          ? "هنوز داده‌ی تاریخی کافی در Supabase ثبت نشده؛ کمی صبر کنید تا ربات گیت‌هاب چند بار قیمت را ثبت کند."
+          : "در حال بارگذاری تاریخچه‌ی واقعی انس طلا (از خودِ منبع داده)… چند ثانیه صبر کنید.";
+      } else {
+        noteEl.textContent = "با نگه‌داشتن موس روی نمودار، تاریخ و قیمت دقیق همان لحظه را می‌بینید. با کشیدن (درگ) به چپ/راست یا اسکرول، تاریخ‌های قدیم‌تر یا جدیدتر را ببینید — برای بازگشت به حالت اول، دکمه‌ی «بازنشانی نما» را بزنید.";
+      }
     }
 
     try {
       const ctx = document.getElementById("gold-chart").getContext("2d");
       const goldColor = getComputedStyle(document.documentElement).getPropertyValue("--gold-1").trim() || "#d4af37";
-      if (goldChart) {
-        goldChart.data.datasets[0].data = points;
-        goldChart.update("none");
-        return;
-      }
+      if (goldChart) { goldChart.destroy(); goldChart = null; }
       goldChart = new Chart(ctx, {
         type: "line",
         data: {
           datasets: [{
-            label: "طلای ۱۸ عیار (تومان)",
+            label,
             data: points,
             borderColor: goldColor,
             backgroundColor: goldColor + "22",
             fill: true,
             tension: 0.25,
-            pointRadius: 0,
+            pointRadius: chartMode === "recent" ? 0 : 2,
             pointHoverRadius: 5,
             pointHoverBackgroundColor: goldColor,
             borderWidth: 2,
@@ -208,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
           scales: {
             x: {
               type: "linear",
-              ticks: { color: "rgba(150,150,150,.7)", maxRotation: 0, callback: (v) => fmtShort(v) },
+              ticks: { color: "rgba(150,150,150,.7)", maxRotation: 0, callback: tickFmt },
               grid: { color: "rgba(150,150,150,.10)" },
             },
             y: {
@@ -221,15 +258,15 @@ document.addEventListener("DOMContentLoaded", () => {
             zoom: window.ChartZoom ? {
               pan: { enabled: true, mode: "x" },
               zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "x" },
-              limits: { x: { minRange: 1000 * 60 * 30 } },
+              limits: { x: { minRange: chartMode === "recent" ? 1000 * 60 * 30 : 1000 * 60 * 60 * 24 * 365 } },
             } : undefined,
             tooltip: {
               rtl: true,
               titleFont: { family: "Vazirmatn" },
               bodyFont: { family: "Vazirmatn" },
               callbacks: {
-                title: (items) => items.length ? fmtDateTime(items[0].parsed.x) : "",
-                label: (item) => formatPrice(item.parsed.y) + " تومان",
+                title: (items) => items.length ? titleFmt(items[0].parsed.x) : "",
+                label: (item) => formatPrice(item.parsed.y) + " " + unit,
               },
             },
           },
@@ -241,7 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   drawGoldChart();
-  document.addEventListener("prices:updated", drawGoldChart);
+  document.addEventListener("prices:updated", () => { if (chartMode === "recent") drawGoldChart(); });
   document.getElementById("gold-chart-reset")?.addEventListener("click", () => { if (goldChart) goldChart.resetZoom(); });
 });
 </script>
