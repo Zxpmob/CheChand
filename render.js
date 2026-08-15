@@ -7,9 +7,14 @@ function priceCardHTML(it) {
   const price = d ? formatPrice(d.price) : `<span class="skeleton" style="display:inline-block;width:70px;"></span>`;
   const chg = d ? d.changePercent : null;
   const chgClass = chg > 0 ? "up" : chg < 0 ? "down" : "";
-  const chgTxt = (chg === null || chg === undefined || Number.isNaN(chg))
-    ? `<span class="pc-updated">${it.source === "manual" ? "مرجع دستی" : "در حال دریافت…"}</span>`
-    : `<span class="pc-chg ${chgClass}">${chg > 0 ? "▲" : chg < 0 ? "▼" : "•"} ${Math.abs(chg).toFixed(2)}٪</span>`;
+  let chgTxt;
+  if (!d) {
+    chgTxt = `<span class="pc-updated">${it.source === "manual" ? "مرجع دستی" : "در حال دریافت…"}</span>`;
+  } else if (chg === null || chg === undefined || Number.isNaN(chg)) {
+    chgTxt = `<span class="pc-updated">—</span>`;
+  } else {
+    chgTxt = `<span class="pc-chg ${chgClass}">${chg > 0 ? "▲" : chg < 0 ? "▼" : "•"} ${Math.abs(chg).toFixed(2)}٪</span>`;
+  }
   const fav = isFavorite(it.id);
   return `
     <a class="price-card glass" href="item.html?id=${it.id}" data-id="${it.id}">

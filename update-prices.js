@@ -37,6 +37,18 @@ async function fetchJson(url, opts) {
   return res.json();
 }
 
+// درصد تغییر ممکن است زیر نام‌های مختلفی در منبع باشد؛ همه را امتحان می‌کنیم
+function extractChangePercent(row) {
+  if (!row) return null;
+  const candidates = [row.change_pct, row.changePercent, row.change_percent, row.percent_change, row.percent, row.drsd];
+  for (const c of candidates) {
+    if (c === undefined || c === null || c === "") continue;
+    const n = typeof c === "string" ? parseFloat(c.replace(/[^\d.\-]/g, "")) : Number(c);
+    if (!Number.isNaN(n)) return n;
+  }
+  return null;
+}
+
 /* طلا/سکه/ارز: از آینه‌ی رایگان و تأییدشده‌ی Navasan روی گیت‌هاب */
 async function getNavasanRows() {
   const [gold, fiat] = await Promise.all([fetchJson(GOLD_URL), fetchJson(FIAT_URL)]);
@@ -48,7 +60,7 @@ async function getNavasanRows() {
     const row = gold[meta.key];
     if (!row || typeof row.value !== "number") return;
     const price = row.value; // مقدار Navasan از قبل به تومان است (نه ریال)
-    const changePct = row.change_pct != null ? Number(row.change_pct) : null;
+    const changePct = extractChangePercent(row);
     if (id === "gold-18") { gold18Price = price; gold18Chg = changePct; }
     rows.push({ item_id: id, category: meta.cat, name: meta.name, unit: meta.unit, price, change_percent: changePct, updated_at: nowIso });
   });
@@ -59,12 +71,12 @@ async function getNavasanRows() {
   }
   const xau = gold["usd_xau"];
   if (xau && xau.value !== undefined) {
-    rows.push({ item_id: "gold-ounce", category: "gold", name: "انس جهانی طلا", unit: "دلار", price: Number(xau.value), change_percent: xau.change_pct != null ? Number(xau.change_pct) : null, updated_at: nowIso });
+    rows.push({ item_id: "gold-ounce", category: "gold", name: "انس جهانی طلا", unit: "دلار", price: Number(xau.value), change_percent: extractChangePercent(xau), updated_at: nowIso });
   }
   Object.entries(CURRENCY_IDS).forEach(([id, name]) => {
     const row = fiat[id];
     if (!row || typeof row.value !== "number") return;
-    rows.push({ item_id: id, category: "currency", name, unit: "تومان", price: row.value, change_percent: row.change_pct != null ? Number(row.change_pct) : null, updated_at: nowIso });
+    rows.push({ item_id: id, category: "currency", name, unit: "تومان", price: row.value, change_percent: extractChangePercent(row), updated_at: nowIso });
   });
   return rows;
 }

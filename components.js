@@ -101,7 +101,7 @@ function renderHeader(activePage) {
    خطای واقعی را نشان می‌دهد تا بشود کپی و برای رفع مشکل فرستاد ------------- */
 function wireDiagnostics(headerEl) {
   setTimeout(() => {
-    const hasPrices = window.PriceStore && Object.keys(PriceStore.data).length > 0;
+    const hasPrices = typeof PriceStore !== "undefined" && Object.keys(PriceStore.data).length > 0;
     if (hasPrices) return;
     const diag = window.NERKH_DIAG || { errors: [] };
     const box = document.createElement("div");

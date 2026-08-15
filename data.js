@@ -128,13 +128,13 @@ function applySupabaseRows(rows) {
 
 /* ==================== حالت ۲: اتصال مستقیم ==================== */
 /* منبع طلا/سکه/ارز: یک آینه‌ی رایگان و بدون‌کلید از داده‌ی Navasan که
-   هر ۱۰ دقیقه روی گیت‌هاب آپدیت می‌شود (ساختار JSON آن را از قبل دیده و
-   تأیید کرده‌ام، برخلاف BrsApi که مطمئن نبودم). چون روی
-   raw.githubusercontent.com است، معمولاً از ایران هم در دسترس است. */
+   هر ۳۰ دقیقه روی گیت‌هاب آپدیت می‌شود (ساختار JSON آن را از قبل دیده و
+   تأیید کرده‌ام). چون روی raw.githubusercontent.com است، معمولاً از
+   ایران هم در دسترس است. */
 const NAVASAN_GOLD_URL = "https://raw.githubusercontent.com/HosseinOdd/Navasan-API/main/data/gold.json";
 const NAVASAN_FIAT_URL = "https://raw.githubusercontent.com/HosseinOdd/Navasan-API/main/data/fiat.json";
 
-// نگاشت مستقیم: کلید ما → کلید دقیق داخل gold.json (مقادیر آن «ریال»اند، تقسیم بر ۱۰ = تومان)
+// نگاشت مستقیم: کلید ما → کلید دقیق داخل gold.json (مقادیر آن از قبل «تومان»اند)
 const GOLD_KEY_MAP = {
   "gold-18": "18ayar",
   "gold-molten": "abshodeh",
@@ -144,8 +144,21 @@ const GOLD_KEY_MAP = {
   "coin-quarter": "rob",
   "coin-gerami": "gerami",
 };
-// نگاشت مستقیم برای ارزها: کلید ما = همان کد ارز کوچک، در fiat.json موجود است (مقدار «ریال» است)
+// نگاشت مستقیم برای ارزها: کلید ما = همان کد ارز کوچک، در fiat.json موجود است (مقدار «تومان» است)
 const CURRENCY_IDS = ["usd", "eur", "gbp", "chf", "aed", "try", "sar", "cny", "jpy", "rub", "cad", "aud"];
+
+// درصد تغییر ممکن است زیر نام‌های مختلفی در منبع باشد؛ همه را امتحان می‌کنیم
+// تا به‌جای خالی‌ماندن، واقعاً مقدارش را پیدا کنیم.
+function extractChangePercent(row) {
+  if (!row) return null;
+  const candidates = [row.change_pct, row.changePercent, row.change_percent, row.percent_change, row.percent, row.drsd];
+  for (const c of candidates) {
+    if (c === undefined || c === null || c === "") continue;
+    const n = typeof c === "string" ? parseFloat(c.replace(/[^\d.\-]/g, "")) : Number(c);
+    if (!Number.isNaN(n)) return n;
+  }
+  return null;
+}
 
 async function fetchNavasan() {
   const [gold, fiat] = await Promise.all([fetchJson(NAVASAN_GOLD_URL), fetchJson(NAVASAN_FIAT_URL)]);
@@ -159,7 +172,7 @@ function applyNavasan({ gold, fiat }) {
       if (!row || typeof row.value !== "number") return;
       setPrice(ourId, {
         price: row.value, // مقدار Navasan از قبل به تومان است (نه ریال)
-        changePercent: row.change_pct || null,
+        changePercent: extractChangePercent(row),
         unit: "تومان",
         cat: ourId.startsWith("coin") ? "coin" : "gold",
         updated: row.date ? row.date * 1000 : Date.now(),
@@ -175,7 +188,7 @@ function applyNavasan({ gold, fiat }) {
     }
     const xau = gold["usd_xau"];
     if (xau && xau.value !== undefined) {
-      setPrice("gold-ounce", { price: Number(xau.value), changePercent: xau.change_pct || null, unit: "دلار", cat: "gold", updated: xau.date ? xau.date * 1000 : Date.now() });
+      setPrice("gold-ounce", { price: Number(xau.value), changePercent: extractChangePercent(xau), unit: "دلار", cat: "gold", updated: xau.date ? xau.date * 1000 : Date.now() });
     }
   }
   if (fiat) {
@@ -184,7 +197,7 @@ function applyNavasan({ gold, fiat }) {
       if (!row || typeof row.value !== "number") return;
       setPrice(id, {
         price: row.value, // مقدار Navasan از قبل به تومان است (نه ریال)
-        changePercent: row.change_pct || null,
+        changePercent: extractChangePercent(row),
         unit: "تومان",
         cat: "currency",
         updated: row.date ? row.date * 1000 : Date.now(),
