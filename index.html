@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260815d"></script>
+<script src="theme.js?v=20260815e"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>چی چند | قیمت لحظه‌ای طلا، دلار، سکه، ارز دیجیتال و بازار ایران</title>
 <meta name="description" content="قیمت لحظه‌ای و به‌روز طلا، سکه، دلار و ارزهای خارجی، بیت‌کوین و رمزارز، فلزات ارزشمند، سنگ‌های قیمتی، خودرو و اشیای کلکسیونی، با نمودار، مبدل واحد و هشدار قیمت.">
@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="style.css?v=20260815d">
+<link rel="stylesheet" href="style.css?v=20260815e">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
@@ -125,13 +125,13 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260815d" defer></script>
-  <script src="gold-history-usd.js?v=20260815d" defer></script>
-  <script src="data.js?v=20260815d" defer></script>
-  <script src="favorites.js?v=20260815d" defer></script>
-  <script src="alerts.js?v=20260815d" defer></script>
-  <script src="render.js?v=20260815d" defer></script>
-  <script src="components.js?v=20260815d" defer></script>
+  <script src="items.js?v=20260815e" defer></script>
+  <script src="gold-history-usd.js?v=20260815e" defer></script>
+  <script src="data.js?v=20260815e" defer></script>
+  <script src="favorites.js?v=20260815e" defer></script>
+  <script src="alerts.js?v=20260815e" defer></script>
+  <script src="render.js?v=20260815e" defer></script>
+  <script src="components.js?v=20260815e" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {
@@ -188,13 +188,14 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    let points, label, unit, tickFmt, titleFmt;
+    let points, label, unit, tickFmt, titleFmt, valueFmt;
     if (chartMode === "usd") {
       points = GOLD_ANNUAL_USD.map(r => ({ x: new Date(r.y, 0, 1).getTime(), y: r.p }));
       label = "میانگین سالانه‌ی انس جهانی طلا (دلار)";
       unit = "دلار";
       tickFmt = (v) => new Date(v).getFullYear();
       titleFmt = (v) => new Date(v).getFullYear();
+      valueFmt = (v) => formatPrice(v);
       noteEl.textContent = "میانگین سالانه‌ی قیمت جهانی طلا (انس، به دلار) از سال ۲۰۰۶ تاکنون — دیتای واقعی و مستند (منبع: Kitco/LBMA). مقدار ۲۰۲۶ چون سال هنوز تمام نشده، آخرین قیمت شناخته‌شده است، نه میانگین کامل سال.";
     } else if (chartMode === "toman") {
       points = GOLD_ANNUAL_TOMAN.map(r => ({ x: new Date(r.y, 0, 1).getTime(), y: r.p / 1000000 }));
@@ -202,6 +203,7 @@ document.addEventListener("DOMContentLoaded", () => {
       unit = "میلیون تومان";
       tickFmt = (v) => new Date(v).getFullYear();
       titleFmt = (v) => new Date(v).getFullYear();
+      valueFmt = (v) => formatPrice(v);
       noteEl.innerHTML = '<span style="color:var(--gold-0);">⚠ تقریبی است:</span> چون هیچ منبع رسمی و رایگانی برای «میانگین سالانه‌ی دقیق نرخ دلار» در همه‌ی این سال‌ها وجود ندارد، این نمودار از ضرب قیمت جهانی طلا در یک تخمین از نرخ آزاد دلار همان سال ساخته شده — روند کلی را درست نشان می‌دهد، ولی عدد دقیق هر سال را نه. (اعداد به میلیون تومان‌اند؛ یعنی عدد ۷۸۵ یعنی ۷۸۵ میلیون تومان.)';
     } else {
       points = await goldChartPoints();
@@ -209,6 +211,10 @@ document.addEventListener("DOMContentLoaded", () => {
       unit = "دلار";
       tickFmt = (v) => fmtShort(v);
       titleFmt = (v) => fmtDateTime(v);
+      // اینجا برخلاف بقیه، عدد دلاری کوچک است و اعشارش مهم است — اگر
+      // فقط عدد صحیح نشان بدهیم، در یک بازه‌ی کم‌نوسان همه چیز یک عدد
+      // به‌نظر می‌رسد؛ برای همین همیشه با دو رقم اعشار نشان می‌دهیم.
+      valueFmt = (v) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       if (points.length < 2) {
         noteEl.textContent = isSupabaseConfigured()
           ? "هنوز داده‌ی تاریخی کافی در Supabase ثبت نشده؛ کمی صبر کنید تا ربات گیت‌هاب چند بار قیمت را ثبت کند."
@@ -249,7 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
               grid: { color: "rgba(150,150,150,.10)" },
             },
             y: {
-              ticks: { color: "rgba(150,150,150,.7)", callback: (v) => formatPrice(v) },
+              ticks: { color: "rgba(150,150,150,.7)", callback: (v) => valueFmt(v) },
               grid: { color: "rgba(150,150,150,.12)" },
             },
           },
@@ -266,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
               bodyFont: { family: "Vazirmatn" },
               callbacks: {
                 title: (items) => items.length ? titleFmt(items[0].parsed.x) : "",
-                label: (item) => formatPrice(item.parsed.y) + " " + unit,
+                label: (item) => valueFmt(item.parsed.y) + " " + unit,
               },
             },
           },

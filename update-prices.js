@@ -83,49 +83,67 @@ async function fetchJson(url, opts) {
   return res.json();
 }
 
-// درصد تغییر ممکن است زیر نام‌های مختلفی در منبع باشد؛ همه را امتحان می‌کنیم
-function extractChangePercent(row) {
-  if (!row) return null;
-  const candidates = [row.change_pct, row.changePercent, row.change_percent, row.percent_change, row.percent, row.drsd];
-  for (const c of candidates) {
-    if (c === undefined || c === null || c === "") continue;
-    const n = typeof c === "string" ? parseFloat(c.replace(/[^\d.\-]/g, "")) : Number(c);
-    if (!Number.isNaN(n)) return n;
+// درصد تغییرِ ۲۴ ساعته را دیگر از فیلدهای حدسیِ منبع نمی‌خوانیم (در عمل
+// معلوم شد پیدا نمی‌شدند یا همیشه صفر برمی‌گشتند)؛ به‌جایش از تاریخچه‌ی
+// واقعیِ خودمان در Supabase (جدول price_history) محاسبه‌اش می‌کنیم.
+async function fetchPrice24hAgo(itemId) {
+  const targetIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const url = `${SUPABASE_URL}/rest/v1/price_history?item_id=eq.${encodeURIComponent(itemId)}&created_at=lte.${encodeURIComponent(targetIso)}&order=created_at.desc&limit=1&select=price,created_at`;
+  try {
+    const res = await fetch(url, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!rows.length) return null;
+    // اگر نزدیک‌ترین رکورد بیش از ۴ ساعت با ۲۴ ساعت پیش فاصله دارد، یعنی
+    // هنوز تاریخچه‌ی کافی جمع نشده — به‌جای عدد نادرست، چیزی برنمی‌گردانیم
+    const gapMs = Math.abs(new Date(targetIso).getTime() - new Date(rows[0].created_at).getTime());
+    if (gapMs > 4 * 60 * 60 * 1000) return null;
+    return Number(rows[0].price);
+  } catch (e) {
+    return null;
   }
-  return null;
+}
+
+async function computeChangePercent24h(itemId, currentPrice) {
+  const oldPrice = await fetchPrice24hAgo(itemId);
+  if (!oldPrice) return null;
+  return ((currentPrice - oldPrice) / oldPrice) * 100;
 }
 
 /* طلا/سکه/ارز: از آینه‌ی رایگان و تأییدشده‌ی Navasan روی گیت‌هاب */
 async function getNavasanRows() {
   const [gold, fiat] = await Promise.all([fetchJson(GOLD_URL), fetchJson(FIAT_URL)]);
-  const rows = [];
   const nowIso = new Date().toISOString();
 
-  let gold18Price = null, gold18Chg = null;
+  // مرحله‌ی ۱: قیمت‌های فعلی را جمع می‌کنیم (بدون درصد تغییر هنوز)
+  const items = []; // {item_id, category, name, unit, price}
   Object.entries(GOLD_KEY_MAP).forEach(([id, meta]) => {
     const row = gold[meta.key];
     if (!row || typeof row.value !== "number") return;
-    const price = row.value; // مقدار Navasan از قبل به تومان است (نه ریال)
-    const changePct = extractChangePercent(row);
-    if (id === "gold-18") { gold18Price = price; gold18Chg = changePct; }
-    rows.push({ item_id: id, category: meta.cat, name: meta.name, unit: meta.unit, price, change_percent: changePct, updated_at: nowIso });
+    items.push({ item_id: id, category: meta.cat, name: meta.name, unit: meta.unit, price: row.value });
   });
-  if (gold18Price) {
-    rows.push({ item_id: "gold-24", category: "gold", name: "طلای ۲۴ عیار (هر گرم)", unit: "تومان", price: gold18Price / 0.75, change_percent: gold18Chg, updated_at: nowIso });
-    rows.push({ item_id: "gold-21", category: "gold", name: "طلای ۲۱ عیار (هر گرم)", unit: "تومان", price: gold18Price * (21 / 18), change_percent: gold18Chg, updated_at: nowIso });
-    rows.push({ item_id: "gold-mesghal", category: "gold", name: "هر مثقال طلا", unit: "تومان", price: gold18Price * 4.6083, change_percent: gold18Chg, updated_at: nowIso });
+  const gold18 = items.find((i) => i.item_id === "gold-18");
+  if (gold18) {
+    items.push({ item_id: "gold-24", category: "gold", name: "طلای ۲۴ عیار (هر گرم)", unit: "تومان", price: gold18.price / 0.75 });
+    items.push({ item_id: "gold-21", category: "gold", name: "طلای ۲۱ عیار (هر گرم)", unit: "تومان", price: gold18.price * (21 / 18) });
+    items.push({ item_id: "gold-mesghal", category: "gold", name: "هر مثقال طلا", unit: "تومان", price: gold18.price * 4.6083 });
   }
   const xau = gold["usd_xau"];
   if (xau && xau.value !== undefined) {
-    rows.push({ item_id: "gold-ounce", category: "gold", name: "انس جهانی طلا", unit: "دلار", price: Number(xau.value), change_percent: extractChangePercent(xau), updated_at: nowIso });
+    items.push({ item_id: "gold-ounce", category: "gold", name: "انس جهانی طلا", unit: "دلار", price: Number(xau.value) });
   }
   Object.entries(CURRENCY_NAMES).forEach(([id, name]) => {
     if (CURRENCY_SKIP.has(id)) return;
     const row = fiat[id];
     if (!row || typeof row.value !== "number") return;
-    rows.push({ item_id: id, category: "currency", name, unit: "تومان", price: row.value, change_percent: extractChangePercent(row), updated_at: nowIso });
+    items.push({ item_id: id, category: "currency", name, unit: "تومان", price: row.value });
   });
-  return rows;
+
+  // مرحله‌ی ۲: برای هرکدام، درصد تغییر واقعیِ ۲۴ساعته را از تاریخچه‌ی
+  // خودمان در Supabase می‌خوانیم (موازی، تا سریع باشد)
+  const changes = await Promise.all(items.map((it) => computeChangePercent24h(it.item_id, it.price)));
+
+  return items.map((it, idx) => ({ ...it, change_percent: changes[idx], updated_at: nowIso }));
 }
 
 /* رمزارز: از نوبیتکس (صرافی ایرانی، داخل ایران فیلتر نیست) — همه‌ی

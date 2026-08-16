@@ -205,17 +205,25 @@ const CURRENCY_NAMES = {
 // کدهایی که عمداً نمایش نمی‌دهیم چون تکراری/گمراه‌کننده‌اند (نرخ شرکتی و مشابه)
 const CURRENCY_SKIP = new Set(["usd_sherkat", "usd_shakhs", "hav_cad_cheque"]);
 
-// درصد تغییر ممکن است زیر نام‌های مختلفی در منبع باشد؛ همه را امتحان می‌کنیم
-// تا به‌جای خالی‌ماندن، واقعاً مقدارش را پیدا کنیم.
-function extractChangePercent(row) {
-  if (!row) return null;
-  const candidates = [row.change_pct, row.changePercent, row.change_percent, row.percent_change, row.percent, row.drsd];
-  for (const c of candidates) {
-    if (c === undefined || c === null || c === "") continue;
-    const n = typeof c === "string" ? parseFloat(c.replace(/[^\d.\-]/g, "")) : Number(c);
-    if (!Number.isNaN(n)) return n;
+// درصد تغییرِ ۲۴ ساعته را دیگر از فیلدهای حدسیِ منبع نمی‌خوانیم (چون در
+// عمل معلوم شد یا پیدا نمی‌شدند یا همیشه صفر برمی‌گشتند)؛ به‌جایش از
+// همان تاریخچه‌ای که خودمان ثبت می‌کنیم محاسبه‌اش می‌کنیم. تا وقتی داده‌ی
+// ۲۴ساعته‌ی کافی جمع نشده (برای انس طلا از همان اول، چون بک‌فیل واقعی
+// دارد؛ برای بقیه‌ی آیتم‌ها ظرف حدود یک روز اول) به‌جای عدد ساختگی، «—»
+// نشان داده می‌شود — نه صفرِ نادرست.
+function computeChangePercent24h(id, currentPrice) {
+  if (typeof currentPrice !== "number") return null;
+  const hist = getHistory(id);
+  if (!hist.length) return null;
+  const targetT = Date.now() - 24 * 60 * 60 * 1000;
+  let best = null, bestDiff = Infinity;
+  for (const p of hist) {
+    const diff = Math.abs(p.t - targetT);
+    if (diff < bestDiff) { bestDiff = diff; best = p; }
   }
-  return null;
+  if (!best || !best.p) return null;
+  if (Math.abs(best.t - targetT) > 4 * 60 * 60 * 1000) return null; // هنوز داده‌ی به‌اندازه‌ی کافی قدیمی نداریم
+  return ((currentPrice - best.p) / best.p) * 100;
 }
 
 function ensureItem(id, cat, name, unit) {
@@ -241,7 +249,7 @@ function applyNavasan({ gold, fiat }) {
       if (ensureItem(meta.id, meta.cat, meta.name, "تومان")) itemsAdded = true;
       setPrice(meta.id, {
         price: row.value, // مقدار Navasan از قبل به تومان است (نه ریال)
-        changePercent: extractChangePercent(row),
+        changePercent: computeChangePercent24h(meta.id, row.value),
         unit: "تومان",
         cat: meta.cat,
         updated: Date.now(), // زمان بررسیِ ما، نه زمان داخلی منبع — تا نمای «چند ثانیه پیش» واقعاً به‌روز بماند
@@ -261,7 +269,7 @@ function applyNavasan({ gold, fiat }) {
     const xau = gold["usd_xau"];
     if (xau && xau.value !== undefined) {
       if (ensureItem("gold-ounce", "gold", "انس جهانی طلا", "دلار")) itemsAdded = true;
-      setPrice("gold-ounce", { price: Number(xau.value), changePercent: extractChangePercent(xau), unit: "دلار", cat: "gold", updated: Date.now() });
+      setPrice("gold-ounce", { price: Number(xau.value), changePercent: computeChangePercent24h("gold-ounce", Number(xau.value)), unit: "دلار", cat: "gold", updated: Date.now() });
     }
   }
 
@@ -273,7 +281,7 @@ function applyNavasan({ gold, fiat }) {
       if (ensureItem(key, "currency", name, "تومان")) itemsAdded = true;
       setPrice(key, {
         price: row.value, // مقدار Navasan از قبل به تومان است (نه ریال)
-        changePercent: extractChangePercent(row),
+        changePercent: computeChangePercent24h(key, row.value),
         unit: "تومان",
         cat: "currency",
         updated: Date.now(), // زمان بررسیِ ما، نه زمان داخلی منبع — تا نمای «چند ثانیه پیش» واقعاً به‌روز بماند
@@ -406,7 +414,18 @@ async function backfillGoldHistoryFromGitHub(onProgress) {
       return { t: date, p: Number(row.value) };
     });
 
-    const points = (await runWithLimit(tasks, 8)).filter(Boolean);
+    let points = (await runWithLimit(tasks, 8)).filter(Boolean).filter((p) => p.p > 0);
+    points.sort((a, b) => a.t - b.t);
+
+    // فیلتر نقاط پرت: اگر یک نقطه بیش از ۵٪ با میانه‌ی کل داده فاصله
+    // داشته باشد، احتمالاً یک خطای لحظه‌ای در خودِ منبع است (نه قیمت
+    // واقعی)؛ حذفش می‌کنیم تا نمودار یک جهش/افت ساختگی نشان ندهد.
+    if (points.length >= 5) {
+      const sortedVals = points.map((p) => p.p).slice().sort((a, b) => a - b);
+      const median = sortedVals[Math.floor(sortedVals.length / 2)];
+      points = points.filter((p) => Math.abs(p.p - median) / median <= 0.05);
+    }
+
     points.forEach((pt) => pushHistory("gold-ounce", pt.p, pt.t));
     localStorage.setItem(GOLD_BACKFILL_FLAG, "1");
     if (onProgress) onProgress(points.length);
