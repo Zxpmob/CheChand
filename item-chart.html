@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script src="theme.js?v=20260817a"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نمودار نوسانات قیمت | چی چند</title>
+<meta name="description" content="نمودار نوسانات قیمت امروز — با نگه‌داشتن موس روی نمودار، قیمت و ساعت دقیق هر لحظه را ببینید.">
+<meta name="robots" content="noindex,follow">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="style.css?v=20260817a">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- عمداً افزونه‌ی زوم/درگ اینجا اضافه نشده — طبق خواسته، این نمودار باید
+     ثابت بماند و با اسکرول یا کشیدن تغییر نکند؛ فقط هاور برای دیدن قیمت
+     دقیق کار می‌کند. -->
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main>
+
+<div class="container">
+  <section class="hero" style="padding:40px 0 10px;text-align:right;">
+    <span class="eyebrow"><span class="dot"></span> نمودار نوسانات</span>
+    <h1 id="ic-title" style="font-size:clamp(1.6rem,4vw,2.4rem);">در حال بارگذاری…</h1>
+    <p style="margin:0;" id="ic-sub"></p>
+  </section>
+
+  <section class="section">
+    <div class="card glass" style="padding:22px 18px;">
+      <div style="position:relative;width:100%;height:340px;">
+        <canvas id="ic-chart"></canvas>
+      </div>
+      <p class="text-dim" id="ic-note" style="font-size:.78rem;margin:14px 0 0;"></p>
+    </div>
+  </section>
+
+  <section class="section">
+    <a class="btn outline" id="ic-back" href="all-prices.html">‹ بازگشت</a>
+  </section>
+</div>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+
+  <script src="items.js?v=20260817a" defer></script>
+  <script src="data.js?v=20260817a" defer></script>
+  <script src="favorites.js?v=20260817a" defer></script>
+  <script src="alerts.js?v=20260817a" defer></script>
+  <script src="render.js?v=20260817a" defer></script>
+  <script src="components.js?v=20260817a" defer></script>
+
+<script defer>
+document.addEventListener("DOMContentLoaded", () => {
+  renderHeader("");
+  renderFooter();
+  initPriceEngine();
+
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id") || "";
+  let icChart = null;
+  let foundOnce = false;
+
+  function fmtDateTime(ts) {
+    return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ts));
+  }
+  function fmtTimeShort(ts) {
+    return new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(new Date(ts));
+  }
+
+  if (!id) {
+    document.getElementById("ic-title").textContent = "موردی مشخص نشده";
+    document.getElementById("ic-sub").textContent = "این صفحه باید از روی آیکن نمودار کنار هر قیمت باز شود.";
+  }
+
+  async function draw() {
+    if (!id) return;
+    const it = SITE_ITEMS.find((i) => i.id === id);
+    const cat = it ? SITE_CATEGORIES.find((c) => c.id === it.cat) : null;
+
+    if (it) {
+      foundOnce = true;
+      document.title = "نمودار " + it.name + " | چی چند";
+      document.getElementById("ic-title").innerHTML = `نوسانات <span>${it.name}</span>`;
+      const d = PriceStore.data[it.id];
+      document.getElementById("ic-sub").textContent = d
+        ? `قیمت فعلی: ${formatPrice(d.price)} ${it.unit}`
+        : "در حال دریافت قیمت لحظه‌ای…";
+      document.getElementById("ic-back").href = cat ? cat.page : "all-prices.html";
+    } else if (!foundOnce) {
+      document.getElementById("ic-title").textContent = "در حال پیدا کردن این مورد…";
+      document.getElementById("ic-sub").textContent = "چند لحظه صبر کنید؛ اگر چیزی نیامد، شاید لینک اشتباه باشد.";
+    }
+
+    const noteEl = document.getElementById("ic-note");
+    if (typeof Chart === "undefined") {
+      noteEl.innerHTML = '<span style="color:var(--danger);">نمودار بارگذاری نشد — احتمالاً کتابخانه‌ی نمودار (از یک CDN خارجی) از دسترس شما مسدود است. بقیه‌ی سایت باید سالم کار کند.</span>';
+      return;
+    }
+
+    const hist = await loadItemHistory(id);
+    if (!hist.length) {
+      noteEl.textContent = "هنوز هیچ داده‌ی تاریخی برای این مورد ثبت نشده — سایت را باز نگه دارید یا کمی بعد دوباره سر بزنید تا نوسانات ثبت شود.";
+      return;
+    }
+
+    // فقط نوسانات «امروز» (از نیمه‌شب محلی تاکنون). اگر داده‌ی امروز کم
+    // بود (مثلاً همین الان اولین بار است که این مورد بازدید می‌شود)، برای
+    // اینکه نمودار خالی نماند بازه را پله‌پله بازتر می‌کنیم.
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    let points = hist.filter((p) => p.t >= startOfDay.getTime());
+    let scopeNote = "نوسانات امروز";
+    if (points.length < 2) {
+      const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      points = hist.filter((p) => p.t >= dayAgo);
+      scopeNote = "۲۴ ساعت اخیر";
+    }
+    if (points.length < 2) {
+      points = hist;
+      scopeNote = "کل داده‌ی موجود (هنوز کم است)";
+    }
+
+    const chartData = points.map((p) => ({ x: p.t, y: p.p }));
+    const goldColor = getComputedStyle(document.documentElement).getPropertyValue("--gold-1").trim() || "#d4af37";
+
+    try {
+      const ctx = document.getElementById("ic-chart").getContext("2d");
+      if (icChart) { icChart.destroy(); icChart = null; }
+      icChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          datasets: [{
+            label: it ? it.name : id,
+            data: chartData,
+            borderColor: goldColor,
+            backgroundColor: goldColor + "22",
+            fill: true,
+            tension: 0.25,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: goldColor,
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: { mode: "index", intersect: false },
+          // بدون افزونه‌ی pan/zoom — عمداً — تا نمودار با اسکرول یا کشیدن
+          // (درگ) تغییر نکند و همیشه همین بازه‌ی ثابت را نشان بدهد.
+          events: ["mousemove", "mouseout", "touchstart", "touchmove"],
+          scales: {
+            x: {
+              type: "linear",
+              ticks: { color: "rgba(150,150,150,.7)", maxRotation: 0, callback: (v) => fmtTimeShort(v) },
+              grid: { color: "rgba(150,150,150,.10)" },
+            },
+            y: {
+              ticks: { color: "rgba(150,150,150,.7)", callback: (v) => formatPrice(v) },
+              grid: { color: "rgba(150,150,150,.12)" },
+            },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              rtl: true,
+              titleFont: { family: "Vazirmatn" },
+              bodyFont: { family: "Vazirmatn" },
+              callbacks: {
+                title: (itemsArr) => (itemsArr.length ? fmtDateTime(itemsArr[0].parsed.x) : ""),
+                label: (item) => formatPrice(item.parsed.y) + (it ? " " + it.unit : ""),
+              },
+            },
+          },
+        },
+      });
+    } catch (err) {
+      console.error("[چی چند] رسم نمودار ناموفق بود:", err);
+      noteEl.innerHTML = '<span style="color:var(--danger);">رسم نمودار با خطا مواجه شد. جزئیات در Console مرورگر (F12) موجود است.</span>';
+      return;
+    }
+
+    noteEl.textContent = `${scopeNote} — با نگه‌داشتن موس (یا انگشت) روی نمودار، تاریخ و قیمت دقیق همان لحظه دیده می‌شود. این نمودار برخلاف نمودار صفحه‌ی اصلی، با اسکرول یا کشیدن تغییر نمی‌کند.`;
+  }
+
+  draw();
+  document.addEventListener("items:updated", draw);
+  document.addEventListener("prices:updated", draw);
+});
+</script>
+</body>
+</html>

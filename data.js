@@ -27,7 +27,17 @@ const CONFIG = {
   NOBITEX_STATS_URL: "https://api.nobitex.ir/market/stats",
 
   REFRESH_MS: 20 * 1000, // هر ۲۰ ثانیه یک‌بار بررسی می‌کنیم؛ سریع‌ترین بازه‌ای که بدون فشار زیاد به منبع رایگان معقول است
-  HISTORY_POINTS: 300,
+
+  // سقف تعداد نقطه‌ی تاریخی که برای هر آیتم در مرورگر نگه می‌داریم.
+  // طلا/سکه/ارز به‌ندرت تغییر می‌کنند (منبع هر ۳۰ دقیقه آپدیت می‌شود)، پس
+  // سقف بالا فضای کمی می‌گیرد ولی نمودارشان را چند روز/هفته عمق می‌دهد —
+  // دقیقاً همان چیزی که برای «تاریخچه‌ی طلا مثل متاتریدر» لازم است.
+  HISTORY_POINTS: 1500,
+  // رمزارز تا ۵۰۰ آیتم است و قیمتش ممکن است هر چند ثانیه عوض شود؛ اگر
+  // همان سقف بالا را می‌داشت، حافظه‌ی مرورگر خیلی زود پر می‌شد — برای
+  // همین سقف جداگانه و کوچک‌تری دارد (همچنان چند ساعت اخیر را نگه می‌دارد).
+  HISTORY_POINTS_CRYPTO: 120,
+
   CACHE_KEY: "nerkh_prices_v5",
   HISTORY_KEY: "nerkh_history_v5",
 };
@@ -337,6 +347,10 @@ function setPrice(id, info) {
   pushHistory(id, info.price);
 }
 
+function historyCapFor(id) {
+  return id.startsWith("crypto-") ? CONFIG.HISTORY_POINTS_CRYPTO : CONFIG.HISTORY_POINTS;
+}
+
 function pushHistory(id, price, explicitTs) {
   if (typeof price !== "number" || Number.isNaN(price)) return;
   let hist = {};
@@ -347,9 +361,22 @@ function pushHistory(id, price, explicitTs) {
   if (!last || last.p !== price || explicitTs) {
     arr.push({ t, p: price });
     arr.sort((a, b) => a.t - b.t);
-    while (arr.length > CONFIG.HISTORY_POINTS) arr.shift();
+    const cap = historyCapFor(id);
+    while (arr.length > cap) arr.shift();
     hist[id] = arr;
-    try { localStorage.setItem(CONFIG.HISTORY_KEY, JSON.stringify(hist)); } catch (e) {}
+    try {
+      localStorage.setItem(CONFIG.HISTORY_KEY, JSON.stringify(hist));
+    } catch (e) {
+      // اگر حافظه‌ی مرورگر پر شده بود، همه‌ی تاریخچه‌ها را نصف می‌کنیم و
+      // دوباره تلاش می‌کنیم — بهتر از این‌که کل ثبت تاریخچه متوقف شود
+      try {
+        Object.keys(hist).forEach((k) => {
+          const a = hist[k];
+          if (a.length > 20) hist[k] = a.slice(Math.floor(a.length / 2));
+        });
+        localStorage.setItem(CONFIG.HISTORY_KEY, JSON.stringify(hist));
+      } catch (e2) {}
+    }
   }
 }
 
@@ -380,8 +407,15 @@ async function loadItemHistory(id) {
    یعنی خودِ تاریخچه‌ی commit های آن مخزن، یک آرشیو واقعی از قیمت طلا در
    طول زمان است. اینجا آن تاریخچه را (فقط یک‌بار، برای همیشه در مرورگر
    کاربر ذخیره می‌شود) می‌خوانیم — بدون نیاز به هیچ دیتابیسی. */
-const GOLD_BACKFILL_FLAG = "nerkh_gold_backfill_done_v3";
+// نسخه‌ی v4: عمق بک‌فیل بیشتر شد (صفحه‌های بیشتر از تاریخچه‌ی commit ها)،
+// برای همین ورژن flag عوض شد تا کاربرهایی که قبلاً بک‌فیل‌شان انجام شده
+// (و فقط عمق کم قبلی را دارند) یک‌بار دیگر با عمق بیشتر بک‌فیل شوند.
+const GOLD_BACKFILL_FLAG = "nerkh_gold_backfill_done_v4";
 const GOLD_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/gold.json&per_page=100";
+// هر commit این مسیر تقریباً هر ۳۰ دقیقه ثبت می‌شود؛ ۶ صفحه (تا ۶۰۰ commit)
+// یعنی حدود ۱۲ روز تاریخچه‌ی واقعی — تجربه‌ای نزدیک‌تر به دیدن «گذشته‌ی
+// نمودار» مثل پلتفرم‌های حرفه‌ای (مثلاً متاتریدر)، بدون نیاز به هیچ دیتابیسی.
+const GOLD_BACKFILL_PAGES = 6;
 
 async function runWithLimit(tasks, limit) {
   const results = [];
@@ -399,9 +433,9 @@ async function runWithLimit(tasks, limit) {
 async function backfillGoldHistoryFromGitHub(onProgress) {
   if (localStorage.getItem(GOLD_BACKFILL_FLAG)) return false;
   try {
-    const page1 = await fetchJson(GOLD_COMMITS_API + "&page=1");
-    const page2 = await fetchJson(GOLD_COMMITS_API + "&page=2");
-    const commits = [...(page1 || []), ...(page2 || [])];
+    const pageNums = Array.from({ length: GOLD_BACKFILL_PAGES }, (_, i) => i + 1);
+    const pages = await Promise.all(pageNums.map((n) => fetchJson(GOLD_COMMITS_API + "&page=" + n)));
+    const commits = pages.filter(Array.isArray).flat();
     if (!commits.length) return false;
 
     const tasks = commits.map((c) => async () => {
@@ -414,16 +448,25 @@ async function backfillGoldHistoryFromGitHub(onProgress) {
       return { t: date, p: Number(row.value) };
     });
 
-    let points = (await runWithLimit(tasks, 8)).filter(Boolean).filter((p) => p.p > 0);
+    let points = (await runWithLimit(tasks, 12)).filter(Boolean).filter((p) => p.p > 0);
     points.sort((a, b) => a.t - b.t);
 
-    // فیلتر نقاط پرت: اگر یک نقطه بیش از ۵٪ با میانه‌ی کل داده فاصله
-    // داشته باشد، احتمالاً یک خطای لحظه‌ای در خودِ منبع است (نه قیمت
-    // واقعی)؛ حذفش می‌کنیم تا نمودار یک جهش/افت ساختگی نشان ندهد.
+    // فیلتر نقاط پرت: اگر یک نقطه بیش از ۵٪ با میانه‌ی «محلی» (چند نقطه‌ی
+    // نزدیکش در زمان، نه کل بازه) فاصله داشته باشد، احتمالاً یک خطای
+    // لحظه‌ای در خودِ منبع است؛ حذفش می‌کنیم. عمداً از میانه‌ی محلی به‌جای
+    // میانه‌ی کل بازه استفاده می‌کنیم — چون حالا بازه تا ۱۲ روز است و قیمت
+    // واقعی طلا می‌تواند در این مدت خودش چند درصد جابه‌جا شود؛ با میانه‌ی
+    // کل، همان جابه‌جایی واقعی هم به‌اشتباه «داده‌ی خراب» حساب می‌شد و
+    // بخشی از تاریخچه‌ی واقعی گم می‌شد.
     if (points.length >= 5) {
-      const sortedVals = points.map((p) => p.p).slice().sort((a, b) => a - b);
-      const median = sortedVals[Math.floor(sortedVals.length / 2)];
-      points = points.filter((p) => Math.abs(p.p - median) / median <= 0.05);
+      const halfWindow = 7;
+      points = points.filter((p, i) => {
+        const lo = Math.max(0, i - halfWindow);
+        const hi = Math.min(points.length, i + halfWindow + 1);
+        const windowVals = points.slice(lo, hi).map((q) => q.p).sort((a, b) => a - b);
+        const localMedian = windowVals[Math.floor(windowVals.length / 2)];
+        return localMedian > 0 && Math.abs(p.p - localMedian) / localMedian <= 0.05;
+      });
     }
 
     points.forEach((pt) => pushHistory("gold-ounce", pt.p, pt.t));

@@ -419,6 +419,16 @@ button, input, select { font-family: inherit; color: inherit; }
 .fav-btn svg { width: 18px; height: 18px; }
 .fav-btn.active { color: var(--gold-0); transform: scale(1.1); }
 .pc-updated { font-size: .68rem; color: var(--text-2); }
+.pc-actions { display: flex; align-items: center; gap: 6px; }
+.chart-btn {
+  border: none; background: none; cursor: pointer;
+  color: var(--text-2); padding: 2px;
+  display: inline-flex; align-items: center;
+  text-decoration: none;
+  transition: color .2s, transform .2s;
+}
+.chart-btn svg { width: 17px; height: 17px; }
+.chart-btn:hover { color: var(--gold-0); transform: scale(1.08); }
 
 /* ============================= جدول ============================= */
 .table-wrap { border-radius: var(--radius-l); overflow: hidden; }

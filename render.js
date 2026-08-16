@@ -20,7 +20,10 @@ function priceCardHTML(it) {
     <div class="price-card glass" data-id="${it.id}">
       <div class="pc-top">
         <span class="pc-name">${it.name}</span>
-        <button class="fav-btn ${fav ? "active" : ""}" data-fav="${it.id}" aria-label="افزودن به علاقه‌مندی‌ها" onclick="handleFavClick('${it.id}', this)">${fav ? ICONS.starFill : ICONS.star}</button>
+        <div class="pc-actions">
+          <a class="chart-btn" href="item-chart.html?id=${encodeURIComponent(it.id)}" aria-label="مشاهده نمودار نوسانات ${it.name}" title="نمودار نوسانات امروز">${ICONS.chart}</a>
+          <button class="fav-btn ${fav ? "active" : ""}" data-fav="${it.id}" aria-label="افزودن به علاقه‌مندی‌ها" onclick="handleFavClick('${it.id}', this)">${fav ? ICONS.starFill : ICONS.star}</button>
+        </div>
       </div>
       <div class="pc-price">${price} <span class="pc-unit">${it.unit}</span></div>
       <div class="pc-bottom">${chgTxt}${d ? `<span class="pc-updated">${timeAgo(d.updated)}</span>` : ""}</div>
@@ -107,7 +110,12 @@ function renderAllPricesTable(containerId, filterText, filterCat) {
       <td>${cat ? cat.title : ""}</td>
       <td class="num">${d ? formatPrice(d.price) : "—"} <span class="text-dim">${it.unit}</span></td>
       <td class="num ${chgClass}">${chg === null || chg === undefined || Number.isNaN(chg) ? "—" : (chg > 0 ? "▲ " : chg < 0 ? "▼ " : "") + Math.abs(chg).toFixed(2) + "٪"}</td>
-      <td><button class="fav-btn ${isFavorite(it.id) ? "active" : ""}" onclick="handleFavClick('${it.id}', this)">${isFavorite(it.id) ? ICONS.starFill : ICONS.star}</button></td>
+      <td>
+        <div class="pc-actions" style="justify-content:flex-end;">
+          <a class="chart-btn" href="item-chart.html?id=${encodeURIComponent(it.id)}" aria-label="مشاهده نمودار نوسانات ${it.name}" title="نمودار نوسانات امروز">${ICONS.chart}</a>
+          <button class="fav-btn ${isFavorite(it.id) ? "active" : ""}" onclick="handleFavClick('${it.id}', this)">${isFavorite(it.id) ? ICONS.starFill : ICONS.star}</button>
+        </div>
+      </td>
     </tr>`;
   }).join("");
 
@@ -144,7 +152,10 @@ function renderMovers(gainersId, losersId) {
   const losers = withChg.slice().sort((a, b) => a.d.changePercent - b.d.changePercent).slice(0, 8);
   const gEl = document.getElementById(gainersId), lEl = document.getElementById(losersId);
   const row = (x, cls) => `<div class="price-card glass">
-      <div class="pc-top"><span class="pc-name">${x.it.name}</span></div>
+      <div class="pc-top">
+        <span class="pc-name">${x.it.name}</span>
+        <a class="chart-btn" href="item-chart.html?id=${encodeURIComponent(x.it.id)}" aria-label="مشاهده نمودار نوسانات ${x.it.name}" title="نمودار نوسانات امروز">${ICONS.chart}</a>
+      </div>
       <div class="pc-price">${formatPrice(x.d.price)} <span class="pc-unit">${x.it.unit}</span></div>
       <div class="pc-bottom"><span class="pc-chg ${cls}">${cls === "up" ? "▲" : "▼"} ${Math.abs(x.d.changePercent).toFixed(2)}٪</span></div>
     </div>`;
