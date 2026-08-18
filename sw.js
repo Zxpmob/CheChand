@@ -6,7 +6,7 @@
  * شبکه گرفته می‌شوند تا قیمت همیشه واقعی و به‌روز بماند.
  */
 
-const CACHE_NAME = "chichand-shell-v1";
+const CACHE_NAME = "chichand-shell-v2"; // نسخه عوض شد تا کش قدیمی (قبل از فیکس نمودار) کامل پاک شود
 
 const SHELL_FILES = [
   "index.html", "gold.html", "coin.html", "currency.html", "crypto.html",
