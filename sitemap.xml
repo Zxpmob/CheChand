@@ -2,6 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://example.com/alerts.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://example.com/all-prices.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/item-chart.html</loc><changefreq>hourly</changefreq><priority>0.5</priority></url>
   <url><loc>https://example.com/coin.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://example.com/converter.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://example.com/crypto.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>

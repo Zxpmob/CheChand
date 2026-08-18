@@ -30,13 +30,15 @@ const CONFIG = {
 
   // سقف تعداد نقطه‌ی تاریخی که برای هر آیتم در مرورگر نگه می‌داریم.
   // طلا/سکه/ارز به‌ندرت تغییر می‌کنند (منبع هر ۳۰ دقیقه آپدیت می‌شود)، پس
-  // سقف بالا فضای کمی می‌گیرد ولی نمودارشان را چند روز/هفته عمق می‌دهد —
-  // دقیقاً همان چیزی که برای «تاریخچه‌ی طلا مثل متاتریدر» لازم است.
-  HISTORY_POINTS: 1500,
-  // رمزارز تا ۵۰۰ آیتم است و قیمتش ممکن است هر چند ثانیه عوض شود؛ اگر
-  // همان سقف بالا را می‌داشت، حافظه‌ی مرورگر خیلی زود پر می‌شد — برای
-  // همین سقف جداگانه و کوچک‌تری دارد (همچنان چند ساعت اخیر را نگه می‌دارد).
-  HISTORY_POINTS_CRYPTO: 120,
+  // سقف بالا فضای کمی می‌گیرد ولی نمودارشان را تا حدود یک ماه عمق می‌دهد —
+  // دقیقاً همان چیزی که برای تب‌های «هفتگی»/«ماهانه» لازم است.
+  HISTORY_POINTS: 2200,
+  // رمزارز تا ۵۰۰ آیتم است و هر ۲۰ ثانیه پرس‌وجو می‌شود؛ اگر سقف بالا را
+  // برای همه‌شان می‌داشتیم، حافظه‌ی مرورگر خیلی زود پر می‌شد. سقف پایین‌تر
+  // برای زنده‌ماندنِ لحظه‌ای کافی است؛ برای «تاریخچه‌ی واقعی یک کوین
+  // خاص» (وقتی کاربر وارد صفحه‌ی نمودار همان کوین می‌شود) جدا و مستقیم
+  // از خودِ CoinGecko گرفته می‌شود (نگاه کنید به backfillCryptoHistory).
+  HISTORY_POINTS_CRYPTO: 200,
 
   CACHE_KEY: "nerkh_prices_v5",
   HISTORY_KEY: "nerkh_history_v5",
@@ -388,34 +390,38 @@ function getHistory(id) {
 }
 
 /* تاریخچه‌ی یک آیتم را برمی‌گرداند: اگر Supabase وصل است از آنجا (واقعاً
-   چندروزه)، وگرنه برای طلای ۱۸ عیار از تاریخچه‌ی commit های گیت‌هاب
-   (بک‌فیل واقعی، بدون دیتابیس) و برای بقیه از localStorage */
+   چندروزه)، وگرنه:
+   - طلا/سکه/ارز: از تاریخچه‌ی commit های گیت‌هاب (بک‌فیل واقعی، بدون دیتابیس)
+   - رمزارز: مستقیم از تاریخچه‌ی واقعیِ خودِ CoinGecko برای همان کوین */
 async function loadItemHistory(id) {
   if (isSupabaseConfigured()) {
     try {
       const rows = await fetchSupabaseHistory(id);
       if (rows.length) return rows;
     } catch (e) { console.error(e); }
-  } else if (id === "gold-ounce") {
-    await backfillGoldHistoryFromGitHub();
+  } else if (id.startsWith("crypto-")) {
+    await backfillCryptoHistory(id);
+  } else {
+    await backfillAllNavasanHistory();
   }
   return getHistory(id);
 }
 
-/* ==================== تاریخچه‌ی واقعی بدون دیتابیس ====================
+/* ==================== تاریخچه‌ی واقعی بدون دیتابیس: طلا/سکه/ارز ====================
    داده‌ی Navasan هر ۳۰ دقیقه با یک commit جدید روی گیت‌هاب آپدیت می‌شود؛
-   یعنی خودِ تاریخچه‌ی commit های آن مخزن، یک آرشیو واقعی از قیمت طلا در
-   طول زمان است. اینجا آن تاریخچه را (فقط یک‌بار، برای همیشه در مرورگر
-   کاربر ذخیره می‌شود) می‌خوانیم — بدون نیاز به هیچ دیتابیسی. */
-// نسخه‌ی v4: عمق بک‌فیل بیشتر شد (صفحه‌های بیشتر از تاریخچه‌ی commit ها)،
-// برای همین ورژن flag عوض شد تا کاربرهایی که قبلاً بک‌فیل‌شان انجام شده
-// (و فقط عمق کم قبلی را دارند) یک‌بار دیگر با عمق بیشتر بک‌فیل شوند.
-const GOLD_BACKFILL_FLAG = "nerkh_gold_backfill_done_v4";
+   یعنی خودِ تاریخچه‌ی commit های آن مخزن، یک آرشیو واقعی از قیمت‌ها در
+   طول زمان است. اینجا آن تاریخچه را — یک‌بار، برای همیشه در مرورگر کاربر
+   ذخیره می‌شود — برای همه‌ی آیتم‌های طلا/سکه/ارز با هم می‌خوانیم (نه فقط
+   یکی)، چون هر commit شامل همه‌ی این مقادیر با هم است؛ همان مجموعه
+   fetch یک‌بار همه را پر می‌کند. */
+// نسخه‌ی v5: بک‌فیل برای همه‌ی آیتم‌ها (نه فقط انس طلا) و عمق نزدیک به
+// یک ماه — برای اینکه تب‌های «هفتگی»/«ماهانه» هم داده‌ی واقعی داشته باشند.
+const FULL_BACKFILL_FLAG = "nerkh_full_backfill_done_v5";
 const GOLD_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/gold.json&per_page=100";
-// هر commit این مسیر تقریباً هر ۳۰ دقیقه ثبت می‌شود؛ ۶ صفحه (تا ۶۰۰ commit)
-// یعنی حدود ۱۲ روز تاریخچه‌ی واقعی — تجربه‌ای نزدیک‌تر به دیدن «گذشته‌ی
-// نمودار» مثل پلتفرم‌های حرفه‌ای (مثلاً متاتریدر)، بدون نیاز به هیچ دیتابیسی.
-const GOLD_BACKFILL_PAGES = 6;
+const FIAT_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/fiat.json&per_page=100";
+// هر commit این مسیرها تقریباً هر ۳۰ دقیقه ثبت می‌شود؛ ۲۰ صفحه (تا ۲۰۰۰
+// commit در هر فایل) یعنی حدود ۴۰ روز تاریخچه‌ی واقعی — نزدیک به یک ماه.
+const BACKFILL_PAGES = 20;
 
 async function runWithLimit(tasks, limit) {
   const results = [];
@@ -430,51 +436,134 @@ async function runWithLimit(tasks, limit) {
   return results;
 }
 
-async function backfillGoldHistoryFromGitHub(onProgress) {
-  if (localStorage.getItem(GOLD_BACKFILL_FLAG)) return false;
-  try {
-    const pageNums = Array.from({ length: GOLD_BACKFILL_PAGES }, (_, i) => i + 1);
-    const pages = await Promise.all(pageNums.map((n) => fetchJson(GOLD_COMMITS_API + "&page=" + n)));
-    const commits = pages.filter(Array.isArray).flat();
-    if (!commits.length) return false;
+// فیلتر نقاط پرت با میانه‌ی «محلی» (چند نقطه‌ی نزدیک در زمان، نه کل
+// بازه) — چون بازه حالا حدود ۴۰ روز است و قیمت واقعی می‌تواند در این
+// مدت خودش چند درصد جابه‌جا شود؛ با میانه‌ی کل، همان جابه‌جایی واقعی هم
+// به‌اشتباه «داده‌ی خراب» حساب می‌شد.
+function filterLocalOutliers(points) {
+  if (points.length < 5) return points;
+  const halfWindow = 7;
+  return points.filter((p, i) => {
+    const lo = Math.max(0, i - halfWindow);
+    const hi = Math.min(points.length, i + halfWindow + 1);
+    const windowVals = points.slice(lo, hi).map((q) => q.p).sort((a, b) => a - b);
+    const localMedian = windowVals[Math.floor(windowVals.length / 2)];
+    return localMedian > 0 && Math.abs(p.p - localMedian) / localMedian <= 0.05;
+  });
+}
 
-    const tasks = commits.map((c) => async () => {
-      const sha = c.sha;
+async function fetchCommitList(baseUrl, pages) {
+  const pageNums = Array.from({ length: pages }, (_, i) => i + 1);
+  const results = await Promise.all(pageNums.map((n) => fetchJson(baseUrl + "&page=" + n)));
+  return results.filter(Array.isArray).flat();
+}
+
+async function backfillAllNavasanHistory(onProgress) {
+  if (localStorage.getItem(FULL_BACKFILL_FLAG)) return false;
+  try {
+    const [goldCommits, fiatCommits] = await Promise.all([
+      fetchCommitList(GOLD_COMMITS_API, BACKFILL_PAGES),
+      fetchCommitList(FIAT_COMMITS_API, BACKFILL_PAGES),
+    ]);
+    if (!goldCommits.length && !fiatCommits.length) return false;
+
+    const goldTasks = goldCommits.map((c) => async () => {
       const date = c.commit && c.commit.committer ? new Date(c.commit.committer.date).getTime() : null;
-      const raw = await fetchJson(`https://raw.githubusercontent.com/HosseinOdd/Navasan-API/${sha}/data/gold.json`);
-      if (!raw || !date) return null;
-      const row = raw["usd_xau"];
-      if (!row || row.value === undefined) return null;
-      return { t: date, p: Number(row.value) };
+      if (!date) return null;
+      const raw = await fetchJson(`https://raw.githubusercontent.com/HosseinOdd/Navasan-API/${c.sha}/data/gold.json`);
+      if (!raw) return null;
+      return { t: date, raw };
+    });
+    const fiatTasks = fiatCommits.map((c) => async () => {
+      const date = c.commit && c.commit.committer ? new Date(c.commit.committer.date).getTime() : null;
+      if (!date) return null;
+      const raw = await fetchJson(`https://raw.githubusercontent.com/HosseinOdd/Navasan-API/${c.sha}/data/fiat.json`);
+      if (!raw) return null;
+      return { t: date, raw };
     });
 
-    let points = (await runWithLimit(tasks, 12)).filter(Boolean).filter((p) => p.p > 0);
-    points.sort((a, b) => a.t - b.t);
+    const [goldResults, fiatResults] = await Promise.all([
+      runWithLimit(goldTasks, 15).then((r) => r.filter(Boolean)),
+      runWithLimit(fiatTasks, 15).then((r) => r.filter(Boolean)),
+    ]);
 
-    // فیلتر نقاط پرت: اگر یک نقطه بیش از ۵٪ با میانه‌ی «محلی» (چند نقطه‌ی
-    // نزدیکش در زمان، نه کل بازه) فاصله داشته باشد، احتمالاً یک خطای
-    // لحظه‌ای در خودِ منبع است؛ حذفش می‌کنیم. عمداً از میانه‌ی محلی به‌جای
-    // میانه‌ی کل بازه استفاده می‌کنیم — چون حالا بازه تا ۱۲ روز است و قیمت
-    // واقعی طلا می‌تواند در این مدت خودش چند درصد جابه‌جا شود؛ با میانه‌ی
-    // کل، همان جابه‌جایی واقعی هم به‌اشتباه «داده‌ی خراب» حساب می‌شد و
-    // بخشی از تاریخچه‌ی واقعی گم می‌شد.
-    if (points.length >= 5) {
-      const halfWindow = 7;
-      points = points.filter((p, i) => {
-        const lo = Math.max(0, i - halfWindow);
-        const hi = Math.min(points.length, i + halfWindow + 1);
-        const windowVals = points.slice(lo, hi).map((q) => q.p).sort((a, b) => a - b);
-        const localMedian = windowVals[Math.floor(windowVals.length / 2)];
-        return localMedian > 0 && Math.abs(p.p - localMedian) / localMedian <= 0.05;
+    // یک سری زمانی جدا برای هر آیتم طلا/سکه بساز (از همان مجموعه fetch ها)
+    const goldSeries = {};
+    Object.values(GOLD_KEY_MAP).forEach((meta) => { goldSeries[meta.id] = []; });
+    goldResults.forEach(({ t, raw }) => {
+      Object.entries(GOLD_KEY_MAP).forEach(([srcKey, meta]) => {
+        const row = raw[srcKey];
+        if (row && typeof row.value === "number" && row.value > 0) goldSeries[meta.id].push({ t, p: row.value });
       });
-    }
+    });
+    // مشتق‌ها (۲۴ و ۲۱ عیار و مثقال) از تاریخچه‌ی واقعیِ ۱۸ عیار
+    const g18series = (goldSeries["gold-18"] || []).slice().sort((a, b) => a.t - b.t);
+    goldSeries["gold-24"] = g18series.map((pt) => ({ t: pt.t, p: pt.p / 0.75 }));
+    goldSeries["gold-21"] = g18series.map((pt) => ({ t: pt.t, p: pt.p * (21 / 18) }));
+    goldSeries["gold-mesghal"] = g18series.map((pt) => ({ t: pt.t, p: pt.p * 4.6083 }));
+    // انس جهانی طلا (usd_xau) جداگانه است، چون در GOLD_KEY_MAP نیست
+    goldSeries["gold-ounce"] = [];
+    goldResults.forEach(({ t, raw }) => {
+      const row = raw["usd_xau"];
+      if (row && row.value !== undefined && Number(row.value) > 0) {
+        goldSeries["gold-ounce"].push({ t, p: Number(row.value) });
+      }
+    });
 
-    points.forEach((pt) => pushHistory("gold-ounce", pt.p, pt.t));
-    localStorage.setItem(GOLD_BACKFILL_FLAG, "1");
-    if (onProgress) onProgress(points.length);
+    let totalPoints = 0;
+    Object.entries(goldSeries).forEach(([id, points]) => {
+      const cleaned = filterLocalOutliers(points.sort((a, b) => a.t - b.t));
+      cleaned.forEach((pt) => pushHistory(id, pt.p, pt.t));
+      totalPoints += cleaned.length;
+    });
+
+    // همین کار برای همه‌ی ارزها (از همان fetch های fiat.json)
+    const fiatSeries = {};
+    Object.keys(CURRENCY_NAMES).forEach((k) => { fiatSeries[k] = []; });
+    fiatResults.forEach(({ t, raw }) => {
+      Object.keys(CURRENCY_NAMES).forEach((key) => {
+        const row = raw[key];
+        if (row && typeof row.value === "number" && row.value > 0) fiatSeries[key].push({ t, p: row.value });
+      });
+    });
+    Object.entries(fiatSeries).forEach(([id, points]) => {
+      const cleaned = filterLocalOutliers(points.sort((a, b) => a.t - b.t));
+      cleaned.forEach((pt) => pushHistory(id, pt.p, pt.t));
+      totalPoints += cleaned.length;
+    });
+
+    localStorage.setItem(FULL_BACKFILL_FLAG, "1");
+    if (onProgress) onProgress(totalPoints);
+    return totalPoints > 0;
+  } catch (e) {
+    console.error("[چی چند] بک‌فیل تاریخچه‌ی طلا/سکه/ارز ناموفق بود:", e);
+    return false;
+  }
+}
+
+/* ==================== تاریخچه‌ی واقعی رمزارز: مستقیم از CoinGecko ====================
+   برخلاف طلا/سکه/ارز، اینجا نیازی به ترفند گیت‌هاب نیست — خودِ CoinGecko
+   یک endpoint رایگان و مستند برای تاریخچه‌ی هر کوین دارد که تا یک سال
+   قیمت واقعی می‌دهد. */
+function cryptoBackfillFlag(cgId) {
+  return "nerkh_crypto_backfill_" + cgId + "_v1";
+}
+
+async function backfillCryptoHistory(id) {
+  const cgId = id.replace(/^crypto-/, "");
+  const flag = cryptoBackfillFlag(cgId);
+  if (localStorage.getItem(flag)) return false;
+  try {
+    const raw = await fetchJson(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(cgId)}/market_chart?vs_currency=usd&days=7`);
+    if (!raw || !Array.isArray(raw.prices)) return false;
+    const points = raw.prices
+      .map(([t, p]) => ({ t: Math.round(t), p: Number(p) }))
+      .filter((pt) => pt.p > 0);
+    points.forEach((pt) => pushHistory(id, pt.p, pt.t));
+    localStorage.setItem(flag, "1");
     return points.length > 0;
   } catch (e) {
-    console.error("[چی چند] بک‌فیل تاریخچه‌ی طلا ناموفق بود:", e);
+    console.error("[چی چند] بک‌فیل تاریخچه‌ی رمزارز ناموفق بود:", e);
     return false;
   }
 }

@@ -149,11 +149,11 @@ document.addEventListener("DOMContentLoaded", () => {
     location.href = "search.html?q=" + encodeURIComponent(document.getElementById("hero-search-input").value);
   });
 
-  // ---------------- نمودار انس جهانی طلا: زنده / چندساله دلار / چندساله تومان ----------------
+  // ---------------- نمودار انس جهانی طلا: دقیقه‌ای / روزانه / هفتگی / ماهانه / سالانه ----------------
   let goldChart = null;
   async function goldChartPoints() {
     const hist = await loadItemHistory("gold-ounce");
-    return hist.map(p => ({ x: p.t, y: p.p }));
+    return hist.slice().sort((a, b) => a.t - b.t);
   }
   function fmtDateTime(ts) {
     return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ts));
@@ -161,15 +161,33 @@ document.addEventListener("DOMContentLoaded", () => {
   function fmtShort(ts) {
     return new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(ts));
   }
+  function fmtDateOnly(ts) {
+    return new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric" }).format(new Date(ts));
+  }
   if (window.ChartZoom) { try { Chart.register(window.ChartZoom); } catch (e) {} }
 
-  let chartMode = "recent"; // "recent" | "usd" | "toman"
+  // هر ۴ تب اول همگی از یک منبعِ واقعیِ یکسان می‌آیند (تاریخچه‌ی واقعیِ
+  // انس طلا که خودِ سایت جمع می‌کند)، فقط با پنجره‌ی زمانی و تراکم متفاوت؛
+  // تب «سالانه» تنها تبی است که از دیتای سالانه‌ی جداگانه (GOLD_ANNUAL_USD) می‌آید.
+  function aggregateByBucket(points, bucketMs) {
+    if (!bucketMs) return points;
+    const buckets = new Map();
+    points.forEach((p) => {
+      const key = Math.floor(p.t / bucketMs);
+      buckets.set(key, p); // آخرین نقطه‌ی هر بازه را نگه می‌داریم (مثل کندل بسته‌شدن)
+    });
+    return Array.from(buckets.values()).sort((a, b) => a.t - b.t);
+  }
+
+  let chartMode = "minute"; // "minute" | "daily" | "weekly" | "monthly" | "yearly"
   const pillsEl = document.getElementById("gold-chart-pills");
   function drawPills() {
     const modes = [
-      { id: "recent", label: "بازه‌ی اخیر (زنده)" },
-      { id: "usd", label: "چند سال گذشته (دلار)" },
-      { id: "toman", label: "چند سال گذشته (تومان، تقریبی)" },
+      { id: "minute", label: "دقیقه‌ای" },
+      { id: "daily", label: "روزانه" },
+      { id: "weekly", label: "هفتگی" },
+      { id: "monthly", label: "ماهانه" },
+      { id: "yearly", label: "سالانه" },
     ];
     pillsEl.innerHTML = modes.map(m => `<button class="pill" data-m="${m.id}" aria-pressed="${m.id === chartMode}">${m.label}</button>`).join("");
     pillsEl.querySelectorAll(".pill").forEach(b => b.addEventListener("click", () => {
@@ -188,37 +206,53 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    let points, label, unit, tickFmt, titleFmt, valueFmt;
-    if (chartMode === "usd") {
+    let points, unit, tickFmt, titleFmt, valueFmt;
+    const dollarFmt = (v) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    if (chartMode === "yearly") {
       points = GOLD_ANNUAL_USD.map(r => ({ x: new Date(r.y, 0, 1).getTime(), y: r.p }));
-      label = "میانگین سالانه‌ی انس جهانی طلا (دلار)";
       unit = "دلار";
       tickFmt = (v) => new Date(v).getFullYear();
       titleFmt = (v) => new Date(v).getFullYear();
       valueFmt = (v) => formatPrice(v);
       noteEl.textContent = "میانگین سالانه‌ی قیمت جهانی طلا (انس، به دلار) از سال ۲۰۰۶ تاکنون — دیتای واقعی و مستند (منبع: Kitco/LBMA). مقدار ۲۰۲۶ چون سال هنوز تمام نشده، آخرین قیمت شناخته‌شده است، نه میانگین کامل سال.";
-    } else if (chartMode === "toman") {
-      points = GOLD_ANNUAL_TOMAN.map(r => ({ x: new Date(r.y, 0, 1).getTime(), y: r.p / 1000000 }));
-      label = "انس جهانی طلا به نرخ آزاد دلار همان سال (میلیون تومان، تقریبی)";
-      unit = "میلیون تومان";
-      tickFmt = (v) => new Date(v).getFullYear();
-      titleFmt = (v) => new Date(v).getFullYear();
-      valueFmt = (v) => formatPrice(v);
-      noteEl.innerHTML = '<span style="color:var(--gold-0);">⚠ تقریبی است:</span> چون هیچ منبع رسمی و رایگانی برای «میانگین سالانه‌ی دقیق نرخ دلار» در همه‌ی این سال‌ها وجود ندارد، این نمودار از ضرب قیمت جهانی طلا در یک تخمین از نرخ آزاد دلار همان سال ساخته شده — روند کلی را درست نشان می‌دهد، ولی عدد دقیق هر سال را نه. (اعداد به میلیون تومان‌اند؛ یعنی عدد ۷۸۵ یعنی ۷۸۵ میلیون تومان.)';
     } else {
-      points = await goldChartPoints();
-      label = "انس جهانی طلا (دلار)";
+      const all = await goldChartPoints();
       unit = "دلار";
-      tickFmt = (v) => fmtShort(v);
-      titleFmt = (v) => fmtDateTime(v);
-      // اینجا برخلاف بقیه، عدد دلاری کوچک است و اعشارش مهم است — اگر
-      // فقط عدد صحیح نشان بدهیم، در یک بازه‌ی کم‌نوسان همه چیز یک عدد
-      // به‌نظر می‌رسد؛ برای همین همیشه با دو رقم اعشار نشان می‌دهیم.
-      valueFmt = (v) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      valueFmt = dollarFmt;
+      const now = Date.now();
+      let windowed, bucketMs;
+      if (chartMode === "minute") {
+        windowed = all.filter(p => p.t >= now - 2 * 24 * 60 * 60 * 1000); // ۲ روز اخیر، خام (بدون تجمیع)
+        bucketMs = 0;
+        tickFmt = (v) => fmtShort(v);
+        titleFmt = (v) => fmtDateTime(v);
+      } else if (chartMode === "daily") {
+        windowed = all.filter(p => p.t >= now - 14 * 24 * 60 * 60 * 1000); // ۱۴ روز اخیر، خام
+        bucketMs = 0;
+        tickFmt = (v) => fmtDateOnly(v);
+        titleFmt = (v) => fmtDateTime(v);
+      } else if (chartMode === "weekly") {
+        windowed = all; // هرچه تاریخچه‌ی واقعی داریم (تا حدود ۴۰ روز)
+        bucketMs = 24 * 60 * 60 * 1000; // یک نقطه به ازای هر روز
+        tickFmt = (v) => fmtDateOnly(v);
+        titleFmt = (v) => fmtDateTime(v);
+      } else { // monthly
+        windowed = all; // هرچه تاریخچه‌ی واقعی داریم
+        bucketMs = 7 * 24 * 60 * 60 * 1000; // یک نقطه به ازای هر هفته
+        tickFmt = (v) => fmtDateOnly(v);
+        titleFmt = (v) => fmtDateTime(v);
+      }
+      const agg = aggregateByBucket(windowed, bucketMs);
+      points = agg.map(p => ({ x: p.t, y: p.p }));
+
       if (points.length < 2) {
         noteEl.textContent = isSupabaseConfigured()
           ? "هنوز داده‌ی تاریخی کافی در Supabase ثبت نشده؛ کمی صبر کنید تا ربات گیت‌هاب چند بار قیمت را ثبت کند."
           : "در حال بارگذاری تاریخچه‌ی واقعی انس طلا (از خودِ منبع داده)… چند ثانیه صبر کنید.";
+      } else if (chartMode === "weekly" || chartMode === "monthly") {
+        const daysSpan = Math.round((points[points.length - 1].x - points[0].x) / (24 * 60 * 60 * 1000));
+        noteEl.textContent = `این نمودار از تاریخچه‌ی واقعیِ خودِ سایت ساخته می‌شود (فعلاً حدود ${daysSpan} روز جمع شده) و هرچه بگذرد عمیق‌تر می‌شود. با نگه‌داشتن موس، تاریخ و قیمت دقیق را می‌بینید.`;
       } else {
         noteEl.textContent = "با نگه‌داشتن موس روی نمودار، تاریخ و قیمت دقیق همان لحظه را می‌بینید. با کشیدن (درگ) به چپ/راست یا اسکرول، تاریخ‌های قدیم‌تر یا جدیدتر را ببینید — برای بازگشت به حالت اول، دکمه‌ی «بازنشانی نما» را بزنید.";
       }
@@ -232,13 +266,13 @@ document.addEventListener("DOMContentLoaded", () => {
         type: "line",
         data: {
           datasets: [{
-            label,
+            label: "انس جهانی طلا (دلار)",
             data: points,
             borderColor: goldColor,
             backgroundColor: goldColor + "22",
             fill: true,
             tension: 0.25,
-            pointRadius: chartMode === "recent" ? 0 : 2,
+            pointRadius: chartMode === "yearly" || chartMode === "weekly" || chartMode === "monthly" ? 2 : 0,
             pointHoverRadius: 5,
             pointHoverBackgroundColor: goldColor,
             borderWidth: 2,
@@ -264,7 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
             zoom: window.ChartZoom ? {
               pan: { enabled: true, mode: "x" },
               zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "x" },
-              limits: { x: { minRange: chartMode === "recent" ? 1000 * 60 * 30 : 1000 * 60 * 60 * 24 * 365 } },
+              limits: { x: { minRange: chartMode === "yearly" ? 1000 * 60 * 60 * 24 * 365 : 1000 * 60 * 30 } },
             } : undefined,
             tooltip: {
               rtl: true,
@@ -284,7 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   drawGoldChart();
-  document.addEventListener("prices:updated", () => { if (chartMode === "recent") drawGoldChart(); });
+  document.addEventListener("prices:updated", () => { if (chartMode === "minute" || chartMode === "daily") drawGoldChart(); });
   document.getElementById("gold-chart-reset")?.addEventListener("click", () => { if (goldChart) goldChart.resetZoom(); });
 });
 </script>
