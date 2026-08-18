@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260819b"></script>
+<script src="theme.js?v=20260819c"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>چی چند | قیمت لحظه‌ای طلا، دلار، سکه، ارز دیجیتال و بازار ایران</title>
 <meta name="description" content="قیمت لحظه‌ای و به‌روز طلا، سکه، دلار و ارزهای خارجی، بیت‌کوین و رمزارز، فلزات ارزشمند، سنگ‌های قیمتی، خودرو و اشیای کلکسیونی، با نمودار، مبدل واحد و هشدار قیمت.">
@@ -26,7 +26,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="style.css?v=20260819b">
+<link rel="stylesheet" href="style.css?v=20260819c">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
@@ -134,13 +134,13 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260819b" defer></script>
-  <script src="gold-history-usd.js?v=20260819b" defer></script>
-  <script src="data.js?v=20260819b" defer></script>
-  <script src="favorites.js?v=20260819b" defer></script>
-  <script src="alerts.js?v=20260819b" defer></script>
-  <script src="render.js?v=20260819b" defer></script>
-  <script src="components.js?v=20260819b" defer></script>
+  <script src="items.js?v=20260819c" defer></script>
+  <script src="gold-history-usd.js?v=20260819c" defer></script>
+  <script src="data.js?v=20260819c" defer></script>
+  <script src="favorites.js?v=20260819c" defer></script>
+  <script src="alerts.js?v=20260819c" defer></script>
+  <script src="render.js?v=20260819c" defer></script>
+  <script src="components.js?v=20260819c" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {
@@ -263,7 +263,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const daysSpan = Math.round((points[points.length - 1].x - points[0].x) / (24 * 60 * 60 * 1000));
         noteEl.textContent = `این نمودار از تاریخچه‌ی واقعیِ خودِ سایت ساخته می‌شود (فعلاً حدود ${daysSpan} روز جمع شده) و هرچه بگذرد عمیق‌تر می‌شود. با نگه‌داشتن موس، تاریخ و قیمت دقیق را می‌بینید.`;
       } else {
-        noteEl.textContent = "با نگه‌داشتن موس روی نمودار، تاریخ و قیمت دقیق همان لحظه را می‌بینید. با کشیدن (درگ) به چپ/راست یا اسکرول، تاریخ‌های قدیم‌تر یا جدیدتر را ببینید — برای بازگشت به حالت اول، دکمه‌ی «بازنشانی نما» را بزنید.";
+        // نقاط واقعی (نه یک منحنیِ ساختگی) با خط راست به هم وصل شده‌اند؛
+        // چگالی نقاط به این بستگی دارد که چقدر وقت است سایت باز است (هر
+        // چند ثانیه یک نقطه‌ی زنده) به‌علاوه‌ی تاریخچه‌ی commit های گیت‌هاب
+        // (هر حدود ۱ ساعت). یعنی نزدیک به «الان» ریزتر و در گذشته درشت‌تر است.
+        noteEl.textContent = "نقاط روی نمودار، قیمت‌های واقعی‌اند و با خط راست به‌هم وصل شده‌اند (نه یک منحنی ساختگی). با نگه‌داشتن موس روی هر نقطه، تاریخ و قیمت دقیق همان لحظه را می‌بینید. با کشیدن (درگ) به چپ/راست یا اسکرول، تاریخ‌های قدیم‌تر یا جدیدتر را ببینید — برای بازگشت به حالت اول، دکمه‌ی «بازنشانی نما» را بزنید.";
       }
     }
 
@@ -280,8 +284,11 @@ document.addEventListener("DOMContentLoaded", () => {
             borderColor: goldColor,
             backgroundColor: goldColor + "22",
             fill: true,
-            tension: 0.25,
-            pointRadius: chartMode === "yearly" || chartMode === "weekly" || chartMode === "monthly" ? 2 : 0,
+            tension: 0, // قبلاً ۰.۲۵ بود؛ روی داده‌ی کم‌تراکم (هر نقطه گاهی چند ساعت فاصله)
+                        // این باعث می‌شد Chart.js یک منحنی نرم و «قوس‌دار» جعلی رسم کند که
+                        // اصلاً شبیه نوسان واقعی طلا (که همیشه ناهموار و دندانه‌داره) نبود؛
+                        // با خط راست بین نقاط واقعی، دیگر چیزی «ساخته» نمی‌شود.
+            pointRadius: chartMode === "minute" || chartMode === "daily" ? 1.5 : 2, // نقاط واقعی دیده می‌شوند، نه فقط یک خط پیوسته‌ی گمراه‌کننده
             pointHoverRadius: 5,
             pointHoverBackgroundColor: goldColor,
             borderWidth: 2,
