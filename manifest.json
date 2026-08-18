@@ -1,12 +1,19 @@
 {
-  "name": "چی چند",
+  "name": "چی چند — قیمت طلا، ارز، سکه و رمزارز",
   "short_name": "چی چند",
   "description": "قیمت لحظه‌ای طلا، ارز، سکه و رمزارز",
   "start_url": "index.html",
+  "scope": ".",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0a0a0c",
   "theme_color": "#0a0a0c",
   "lang": "fa",
   "dir": "rtl",
-  "icons": []
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }

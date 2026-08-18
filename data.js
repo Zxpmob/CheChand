@@ -26,7 +26,13 @@ const CONFIG = {
   // --- حالت ۲: اتصال مستقیم (بدون نیاز به هیچ تنظیمی از پیش کار می‌کند) ---
   NOBITEX_STATS_URL: "https://api.nobitex.ir/market/stats",
 
-  REFRESH_MS: 20 * 1000, // هر ۲۰ ثانیه یک‌بار بررسی می‌کنیم؛ سریع‌ترین بازه‌ای که بدون فشار زیاد به منبع رایگان معقول است
+  REFRESH_MS: 30 * 1000, // هر ۳۰ ثانیه یک‌بار بررسی می‌کنیم (طلا/ارز از یک فایل ثابت روی گیت‌هاب می‌آید، فشاری ندارد)
+  // رمزارز جدا و کندتر بررسی می‌شود (هر ۳ چرخه = ~۹۰ ثانیه)، چون API رایگان
+  // CoinGecko سقف ۵ تا ۱۵ درخواست در دقیقه دارد؛ چک‌کردن هر ۲۰ ثانیه (قبلی)
+  // یعنی ۶ درخواست در دقیقه فقط از یک تب — با چند کاربر پشت یک IP مشترک
+  // (که در ایران با NAT حامل رایج است) همین باعث می‌شد قیمت رمزارز و
+  // «پرتغییرترین‌ها» به‌طور نامنظم خالی بمانند.
+  CRYPTO_REFRESH_EVERY_N_CYCLES: 3,
 
   // سقف تعداد نقطه‌ی تاریخی که برای هر آیتم در مرورگر نگه می‌داریم.
   // طلا/سکه/ارز به‌ندرت تغییر می‌کنند (منبع هر ۳۰ دقیقه آپدیت می‌شود)، پس
@@ -85,21 +91,48 @@ function recordDiagError(url, err) {
 }
 window.NERKH_DIAG = DIAG;
 
-async function fetchJson(url, opts) {
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+async function fetchJsonOnce(url, opts) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await fetch(url, { cache: "no-store", signal: controller.signal, ...opts });
-    if (!res.ok) throw new Error("HTTP " + res.status);
+    if (!res.ok) {
+      const err = new Error("HTTP " + res.status);
+      err.status = res.status;
+      throw err;
+    }
     return await res.json();
-  } catch (err) {
-    const msg = err && err.name === "AbortError" ? "بیش از ۱۰ ثانیه پاسخی نیامد (تایم‌اوت)" : err;
-    console.error("[چی چند] خطا در دریافت", url, msg);
-    recordDiagError(url, err && err.name === "AbortError" ? new Error("تایم‌اوت (۱۰ ثانیه)") : err);
-    return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+// اگر پاسخ ۴۲۹ (بیش از حد مجاز درخواست) یا ۵۰۳ بود، یک یا دو بار با کمی
+// مکث دوباره تلاش می‌کنیم به‌جای این‌که فوراً شکست بخوریم و کارت خالی
+// بماند — این دقیقاً همان چیزی است که باعث می‌شد رمزارز/پرتغییرترین‌ها
+// گاهی بدون هیچ پیام خطایی خالی بمانند.
+async function fetchJson(url, opts, retries) {
+  retries = retries === undefined ? 2 : retries;
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetchJsonOnce(url, opts);
+    } catch (err) {
+      lastErr = err;
+      const retryable = err && (err.name === "AbortError" || err.status === 429 || err.status === 503 || err.status >= 500);
+      if (attempt < retries && retryable) {
+        await sleep(1500 * (attempt + 1));
+        continue;
+      }
+      break;
+    }
+  }
+  const msg = lastErr && lastErr.name === "AbortError" ? "بیش از ۱۰ ثانیه پاسخی نیامد (تایم‌اوت)" : lastErr;
+  console.error("[چی چند] خطا در دریافت", url, msg);
+  recordDiagError(url, lastErr && lastErr.name === "AbortError" ? new Error("تایم‌اوت (۱۰ ثانیه)") : (lastErr && lastErr.status === 429 ? new Error("محدودیت تعداد درخواست منبع (۴۲۹) — کمی بعد دوباره امتحان می‌شود") : lastErr));
+  return null;
 }
 
 /* ==================== حالت ۱: Supabase ==================== */
@@ -313,10 +346,12 @@ function applyNavasan({ gold, fiat }) {
 const COINGECKO_MARKETS_URL = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=24h";
 
 async function fetchCoinGeckoMarkets() {
-  const [p1, p2] = await Promise.all([
-    fetchJson(COINGECKO_MARKETS_URL + "&page=1"),
-    fetchJson(COINGECKO_MARKETS_URL + "&page=2"),
-  ]);
+  // این دو صفحه قبلاً هم‌زمان (Promise.all) درخواست می‌شدند؛ چون سقف
+  // رایگان CoinGecko همین‌قدر پایین است (۵ تا ۱۵ درخواست در دقیقه)، یک
+  // مکث کوچک بین این دو درخواست می‌گذاریم تا احتمال ۴۲۹‌خوردن کمتر شود.
+  const p1 = await fetchJson(COINGECKO_MARKETS_URL + "&page=1");
+  await sleep(800);
+  const p2 = await fetchJson(COINGECKO_MARKETS_URL + "&page=2");
   return [...(p1 || []), ...(p2 || [])];
 }
 
@@ -414,14 +449,33 @@ async function loadItemHistory(id) {
    ذخیره می‌شود — برای همه‌ی آیتم‌های طلا/سکه/ارز با هم می‌خوانیم (نه فقط
    یکی)، چون هر commit شامل همه‌ی این مقادیر با هم است؛ همان مجموعه
    fetch یک‌بار همه را پر می‌کند. */
-// نسخه‌ی v5: بک‌فیل برای همه‌ی آیتم‌ها (نه فقط انس طلا) و عمق نزدیک به
-// یک ماه — برای اینکه تب‌های «هفتگی»/«ماهانه» هم داده‌ی واقعی داشته باشند.
-const FULL_BACKFILL_FLAG = "nerkh_full_backfill_done_v5";
+// نسخه‌ی v6: بک‌فیل برای همه‌ی آیتم‌ها، ولی سبک‌تر (~۶ روز به‌جای ~۴۰ روز)
+// چون نسخه‌ی قبلی تا ۴۰۰۰ درخواست همزمان می‌زد و هم کند بود هم باعث
+// می‌شد باقی سایت (رمزارز، حتی طلا/ارز زنده) گیر کند یا رد شود.
+const FULL_BACKFILL_FLAG = "nerkh_full_backfill_done_v6";
+// اگر بک‌فیل شکست خورد (مثلاً به‌خاطر سقف درخواست گیت‌هاب)، این زمان را
+// ثبت می‌کنیم و تا ۶ ساعت دوباره امتحان نمی‌کنیم. قبلاً هیچ چنین سقفی
+// نبود، یعنی هر بار که کاربر یک صفحه‌ی نمودار را باز می‌کرد و بک‌فیل
+// (که خودش می‌توانست هزاران درخواست بزند) شکست می‌خورد، دوباره از صفر
+// همان هزاران درخواست تکرار می‌شد — همین «هی یه چیزو درست می‌کنی یه چیز
+// دیگه خراب می‌شه» و کندی سایت را می‌ساخت.
+const BACKFILL_COOLDOWN_FLAG = "nerkh_backfill_last_attempt_v6";
+const BACKFILL_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const GOLD_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/gold.json&per_page=100";
 const FIAT_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/fiat.json&per_page=100";
-// هر commit این مسیرها تقریباً هر ۳۰ دقیقه ثبت می‌شود؛ ۲۰ صفحه (تا ۲۰۰۰
-// commit در هر فایل) یعنی حدود ۴۰ روز تاریخچه‌ی واقعی — نزدیک به یک ماه.
-const BACKFILL_PAGES = 20;
+// قبلاً ۲۰ صفحه (تا ۲۰۰۰ commit در هر فایل) می‌خواندیم — یعنی تا ~۴۰
+// درخواست فقط برای لیست commit ها (سقف رایگان و بدون‌کلید گیت‌هاب برای
+// api.github.com فقط ۶۰ درخواست در ساعت برای هر IP است، پس این تنهایی
+// تقریباً کل سهمیه‌ی یک ساعت را می‌خورد)، و سپس تا ~۴۰۰۰ درخواست جداگانه
+// به raw.githubusercontent.com برای محتوای هر commit — همین حجم عظیم
+// درخواست همزمان، هم سایت را کند می‌کرد و هم باعث می‌شد بقیه‌ی
+// درخواست‌های صفحه (رمزارز، حتی خودِ طلا/ارز زنده) دیر یا اصلاً جواب
+// نگیرند. الان به ۳ صفحه (~۳۰۰ commit، حدود ۶ روز) کاهش پیدا کرده و از
+// هر commit فقط یکی‌درمیان واقعاً خوانده می‌شود (نمونه‌برداری)، چون هر
+// حال دقتِ نیم‌ساعته برای یک نمودار روزانه بیش از کافی است.
+const BACKFILL_PAGES = 3;
+const BACKFILL_SAMPLE_EVERY = 2; // از هر ۲ commit فقط ۱ تا واقعاً خوانده می‌شود
+const BACKFILL_CONCURRENCY = 6; // قبلاً ۱۵ — فشار کمتر روی raw.githubusercontent.com
 
 async function runWithLimit(tasks, limit) {
   const results = [];
@@ -460,11 +514,17 @@ async function fetchCommitList(baseUrl, pages) {
 
 async function backfillAllNavasanHistory(onProgress) {
   if (localStorage.getItem(FULL_BACKFILL_FLAG)) return false;
+  const lastAttempt = Number(localStorage.getItem(BACKFILL_COOLDOWN_FLAG) || 0);
+  if (Date.now() - lastAttempt < BACKFILL_COOLDOWN_MS) return false;
+  localStorage.setItem(BACKFILL_COOLDOWN_FLAG, String(Date.now()));
   try {
-    const [goldCommits, fiatCommits] = await Promise.all([
+    const [goldCommitsRaw, fiatCommitsRaw] = await Promise.all([
       fetchCommitList(GOLD_COMMITS_API, BACKFILL_PAGES),
       fetchCommitList(FIAT_COMMITS_API, BACKFILL_PAGES),
     ]);
+    // نمونه‌برداری: از هر چند commit فقط یکی را واقعاً می‌خوانیم
+    const goldCommits = goldCommitsRaw.filter((_, i) => i % BACKFILL_SAMPLE_EVERY === 0);
+    const fiatCommits = fiatCommitsRaw.filter((_, i) => i % BACKFILL_SAMPLE_EVERY === 0);
     if (!goldCommits.length && !fiatCommits.length) return false;
 
     const goldTasks = goldCommits.map((c) => async () => {
@@ -483,8 +543,8 @@ async function backfillAllNavasanHistory(onProgress) {
     });
 
     const [goldResults, fiatResults] = await Promise.all([
-      runWithLimit(goldTasks, 15).then((r) => r.filter(Boolean)),
-      runWithLimit(fiatTasks, 15).then((r) => r.filter(Boolean)),
+      runWithLimit(goldTasks, BACKFILL_CONCURRENCY).then((r) => r.filter(Boolean)),
+      runWithLimit(fiatTasks, BACKFILL_CONCURRENCY).then((r) => r.filter(Boolean)),
     ]);
 
     // یک سری زمانی جدا برای هر آیتم طلا/سکه بساز (از همان مجموعه fetch ها)
@@ -578,16 +638,24 @@ function saveCache() {
   try { localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify(PriceStore.data)); } catch (e) {}
 }
 
-async function refreshAllPrices() {
+let _refreshCycle = 0;
+
+async function refreshAllPrices(force) {
   let handled = false;
   if (isSupabaseConfigured()) {
+    // حالت Supabase: هم طلا/ارز و هم رمزارز (از نوبیتکس) از یک منبع
+    // می‌آیند و محدودیت CoinGecko اصلاً اینجا معنا ندارد؛ هر چرخه تازه می‌شود.
     const rows = await fetchSupabaseLatest();
     if (applySupabaseRows(rows)) handled = true;
   }
   if (!handled) {
-    const [nav, crypto] = await Promise.all([fetchNavasan(), fetchCoinGeckoMarkets()]);
+    const shouldFetchCrypto = force || _refreshCycle % CONFIG.CRYPTO_REFRESH_EVERY_N_CYCLES === 0;
+    _refreshCycle++;
+    const navPromise = fetchNavasan();
+    const cryptoPromise = shouldFetchCrypto ? fetchCoinGeckoMarkets() : Promise.resolve(null);
+    const [nav, crypto] = await Promise.all([navPromise, cryptoPromise]);
     applyNavasan(nav);
-    applyCoinGeckoMarkets(crypto);
+    if (crypto) applyCoinGeckoMarkets(crypto);
   }
   PriceStore.ready = true;
   PriceStore.lastFetch = Date.now();
@@ -600,7 +668,7 @@ function initPriceEngine() {
   if (Object.keys(PriceStore.data).length) {
     document.dispatchEvent(new CustomEvent("prices:updated", { detail: PriceStore.data }));
   }
-  refreshAllPrices();
+  refreshAllPrices(true); // بار اول همیشه رمزارز را هم می‌گیریم
   setInterval(refreshAllPrices, CONFIG.REFRESH_MS);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshAllPrices();

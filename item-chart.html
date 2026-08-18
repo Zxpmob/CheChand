@@ -2,16 +2,25 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260817a"></script>
+<script src="theme.js?v=20260819a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>نمودار نوسانات قیمت | چی چند</title>
 <meta name="description" content="نمودار نوسانات قیمت امروز — با نگه‌داشتن موس روی نمودار، قیمت و ساعت دقیق هر لحظه را ببینید.">
 <meta name="robots" content="noindex,follow">
 <meta name="theme-color" content="#0a0a0c">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="apple-touch-icon-167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="چی چند">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="style.css?v=20260817a">
+<link rel="stylesheet" href="style.css?v=20260819a">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <!-- عمداً افزونه‌ی زوم/درگ اینجا اضافه نشده — طبق خواسته، این نمودار باید
      ثابت بماند و با اسکرول یا کشیدن تغییر نکند؛ فقط هاور برای دیدن قیمت
@@ -45,12 +54,12 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260817a" defer></script>
-  <script src="data.js?v=20260817a" defer></script>
-  <script src="favorites.js?v=20260817a" defer></script>
-  <script src="alerts.js?v=20260817a" defer></script>
-  <script src="render.js?v=20260817a" defer></script>
-  <script src="components.js?v=20260817a" defer></script>
+  <script src="items.js?v=20260819a" defer></script>
+  <script src="data.js?v=20260819a" defer></script>
+  <script src="favorites.js?v=20260819a" defer></script>
+  <script src="alerts.js?v=20260819a" defer></script>
+  <script src="render.js?v=20260819a" defer></script>
+  <script src="components.js?v=20260819a" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {
@@ -191,6 +200,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("items:updated", draw);
   document.addEventListener("prices:updated", draw);
 });
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
