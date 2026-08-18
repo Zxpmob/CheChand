@@ -47,7 +47,7 @@ const CONFIG = {
   HISTORY_POINTS_CRYPTO: 200,
 
   CACHE_KEY: "nerkh_prices_v5",
-  HISTORY_KEY: "nerkh_history_v5",
+  HISTORY_KEY: "nerkh_history_v6", // نسخه عوض شد — تاریخچه‌ی قدیمیِ ذخیره‌شده در مرورگر کاربر (که شامل نقاط تخت/کم‌تراکم نسخه‌ی قبلی بود) کنار گذاشته می‌شود و از صفر و تمیز ساخته می‌شود
 };
 
 function isSupabaseConfigured() {
@@ -452,30 +452,28 @@ async function loadItemHistory(id) {
 // نسخه‌ی v6: بک‌فیل برای همه‌ی آیتم‌ها، ولی سبک‌تر (~۶ روز به‌جای ~۴۰ روز)
 // چون نسخه‌ی قبلی تا ۴۰۰۰ درخواست همزمان می‌زد و هم کند بود هم باعث
 // می‌شد باقی سایت (رمزارز، حتی طلا/ارز زنده) گیر کند یا رد شود.
-const FULL_BACKFILL_FLAG = "nerkh_full_backfill_done_v6";
+const FULL_BACKFILL_FLAG = "nerkh_full_backfill_done_v7";
 // اگر بک‌فیل شکست خورد (مثلاً به‌خاطر سقف درخواست گیت‌هاب)، این زمان را
-// ثبت می‌کنیم و تا ۶ ساعت دوباره امتحان نمی‌کنیم. قبلاً هیچ چنین سقفی
-// نبود، یعنی هر بار که کاربر یک صفحه‌ی نمودار را باز می‌کرد و بک‌فیل
-// (که خودش می‌توانست هزاران درخواست بزند) شکست می‌خورد، دوباره از صفر
-// همان هزاران درخواست تکرار می‌شد — همین «هی یه چیزو درست می‌کنی یه چیز
-// دیگه خراب می‌شه» و کندی سایت را می‌ساخت.
-const BACKFILL_COOLDOWN_FLAG = "nerkh_backfill_last_attempt_v6";
+// ثبت می‌کنیم و تا ۶ ساعت دوباره امتحان نمی‌کنیم.
+const BACKFILL_COOLDOWN_FLAG = "nerkh_backfill_last_attempt_v7";
 const BACKFILL_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const GOLD_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/gold.json&per_page=100";
 const FIAT_COMMITS_API = "https://api.github.com/repos/HosseinOdd/Navasan-API/commits?path=data/fiat.json&per_page=100";
-// قبلاً ۲۰ صفحه (تا ۲۰۰۰ commit در هر فایل) می‌خواندیم — یعنی تا ~۴۰
-// درخواست فقط برای لیست commit ها (سقف رایگان و بدون‌کلید گیت‌هاب برای
-// api.github.com فقط ۶۰ درخواست در ساعت برای هر IP است، پس این تنهایی
-// تقریباً کل سهمیه‌ی یک ساعت را می‌خورد)، و سپس تا ~۴۰۰۰ درخواست جداگانه
-// به raw.githubusercontent.com برای محتوای هر commit — همین حجم عظیم
-// درخواست همزمان، هم سایت را کند می‌کرد و هم باعث می‌شد بقیه‌ی
-// درخواست‌های صفحه (رمزارز، حتی خودِ طلا/ارز زنده) دیر یا اصلاً جواب
-// نگیرند. الان به ۳ صفحه (~۳۰۰ commit، حدود ۶ روز) کاهش پیدا کرده و از
-// هر commit فقط یکی‌درمیان واقعاً خوانده می‌شود (نمونه‌برداری)، چون هر
-// حال دقتِ نیم‌ساعته برای یک نمودار روزانه بیش از کافی است.
-const BACKFILL_PAGES = 3;
-const BACKFILL_SAMPLE_EVERY = 2; // از هر ۲ commit فقط ۱ تا واقعاً خوانده می‌شود
-const BACKFILL_CONCURRENCY = 6; // قبلاً ۱۵ — فشار کمتر روی raw.githubusercontent.com
+// نسخه‌ی v6 (۳ صفحه + نمونه‌برداری یکی‌درمیان) برای رفع مشکل کندی خیلی
+// سبک شده بود، ولی همین باعث شد فاصله‌ی واقعی بین نقاط زیاد شود — نتیجه‌اش
+// روی نمودار، جهش‌های ناگهانی و خط‌های عمودی غیرواقعی بین دو نقطه‌ی دورافتاده
+// بود (چیزی که در اسکرین‌شات هفتگی دیده شد). نکته‌ی مهم: سقف محدودیت
+// گیت‌هاب (۶۰ درخواست در ساعت) فقط برای «لیست commit ها»
+// (api.github.com) است، نه برای خودِ محتوا (raw.githubusercontent.com)؛
+// و لیست‌گرفتن فقط ۲ تا ۱۰ درخواست است، پس جای زیادی برای افزایش
+// تراکم داریم بدون نزدیک‌شدن به آن سقف. مشکل واقعیِ قبلی («کندی»)
+// حجم درخواست‌های راو (تا ۴۰۰۰ تا) بود، نه لیست commit ها. پس الان
+// صفحات را زیاد کردیم (تراکم بیشتر) ولی نمونه‌برداری را برداشتیم (چون
+// دیگر لازم نیست) — نتیجه تقریباً ۱۰۰۰ درخواست raw، که هم چگالی خوبی
+// می‌دهد هم چهار برابر سبک‌تر از نسخه‌ی اصلی (۴۰۰۰) است.
+const BACKFILL_PAGES = 5;
+const BACKFILL_SAMPLE_EVERY = 1; // بدون نمونه‌برداری — همه‌ی commit های گرفته‌شده واقعاً خوانده می‌شوند
+const BACKFILL_CONCURRENCY = 6;
 
 async function runWithLimit(tasks, limit) {
   const results = [];
@@ -519,6 +517,30 @@ function filterLocalOutliers(points) {
     const avgNeighbor = (prev + next) / 2;
     return Math.abs(p.p - avgNeighbor) / avgNeighbor <= SPIKE_THRESHOLD;
   });
+}
+
+// جمع‌کردن ردیف‌های «تکراریِ پشت‌سرهم» — چیزی که در اسکرین‌شات‌ها به شکل
+// یک خط کاملاً تخت و یک‌دست برای بیش از یک روز دیده می‌شد. علتش این
+// است: منبع (Navasan-API روی گیت‌هاب) گاهی وقتی اسکرِیپ برایش شکست
+// می‌خورد یا سایت اصلی navasan.net به‌روز نمی‌شود، همان عدد قبلی را
+// دوباره commit می‌کند — یعنی چند ده commit پشت‌سرهم دقیقاً همان قیمت
+// را دارند. نگه‌داشتن همه‌ی این‌ها باعث می‌شود یک بازه‌ی «بدون داده‌ی
+// واقعی جدید» شبیه یک خط زنده و پرتراکم دیده شود، که گمراه‌کننده است.
+// این تابع از هر ردیفِ عدد یکسان و پشت‌سرهم، فقط نقطه‌ی اول و آخر را
+// نگه می‌دارد (کافی برای این‌که خط راست بین‌شان دقیقاً همان تخت‌بودن
+// واقعی را نشان بدهد) و بقیه را کنار می‌گذارد.
+function collapseStaleRuns(points) {
+  if (points.length < 3) return points;
+  const out = [];
+  let i = 0;
+  while (i < points.length) {
+    let j = i;
+    while (j + 1 < points.length && points[j + 1].p === points[i].p) j++;
+    out.push(points[i]);
+    if (j > i) out.push(points[j]); // اول و آخر همان مقدار تکراری — نه همه‌ی نقاط وسط
+    i = j + 1;
+  }
+  return out;
 }
 
 
@@ -588,7 +610,7 @@ async function backfillAllNavasanHistory(onProgress) {
 
     let totalPoints = 0;
     Object.entries(goldSeries).forEach(([id, points]) => {
-      const cleaned = filterLocalOutliers(points.sort((a, b) => a.t - b.t));
+      const cleaned = filterLocalOutliers(collapseStaleRuns(points.sort((a, b) => a.t - b.t)));
       cleaned.forEach((pt) => pushHistory(id, pt.p, pt.t));
       totalPoints += cleaned.length;
     });
@@ -603,7 +625,7 @@ async function backfillAllNavasanHistory(onProgress) {
       });
     });
     Object.entries(fiatSeries).forEach(([id, points]) => {
-      const cleaned = filterLocalOutliers(points.sort((a, b) => a.t - b.t));
+      const cleaned = filterLocalOutliers(collapseStaleRuns(points.sort((a, b) => a.t - b.t)));
       cleaned.forEach((pt) => pushHistory(id, pt.p, pt.t));
       totalPoints += cleaned.length;
     });
