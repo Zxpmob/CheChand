@@ -490,21 +490,37 @@ async function runWithLimit(tasks, limit) {
   return results;
 }
 
-// فیلتر نقاط پرت با میانه‌ی «محلی» (چند نقطه‌ی نزدیک در زمان، نه کل
-// بازه) — چون بازه حالا حدود ۴۰ روز است و قیمت واقعی می‌تواند در این
-// مدت خودش چند درصد جابه‌جا شود؛ با میانه‌ی کل، همان جابه‌جایی واقعی هم
-// به‌اشتباه «داده‌ی خراب» حساب می‌شد.
+// فیلتر نقاط پرت — نسخه‌ی اصلاح‌شده (v2)
+// ------------------------------------------------------------
+// نسخه‌ی قبلی «میانه‌ی محلی» بود: هر نقطه‌ای که بیش از ۵٪ با میانه‌ی
+// ~۱۵ نقطه‌ی اطرافش فرق داشت، کلاً حذف می‌شد. مشکل بزرگ این روش: در
+// یک روند واقعی و پیوسته (مثل رالی چند-روزه‌ی طلا که این روزها حتی
+// >۳٪ در یک روز معمول است)، میانه‌ی پنجره همیشه یک قدم از قیمت واقعی
+// عقب می‌افتد، پس نقاط کاملاً واقعیِ وسط یک صعود/نزول به اشتباه «پرت»
+// حساب و حذف می‌شدند — نتیجه‌اش نموداری پله‌ای و بی‌منطق بود، دقیقاً
+// همان چیزی که «نمودار انس طلا منطقی نیست» توصیفش می‌کند.
+//
+// روش درست: یک نقطه را فقط وقتی «پرت واقعی» بدانیم که تک‌افتاده باشد —
+// یعنی همسایه‌ی قبلی و بعدی‌اش (از نظر زمانی) به هم نزدیک باشند ولی
+// خودش از هر دو خیلی فاصله داشته باشد (یعنی خودِ همان یک نقطه گیج‌کننده
+// است، نه این‌که بقیه‌ی دنیا از او عقب افتاده). این‌طور یک رالی واقعی
+// (که همسایه‌ها هم با هم حرکت می‌کنند) هرگز پاک نمی‌شود؛ فقط یک عدد
+// خراب و تک (مثلاً یک صفر اضافه یا یک خطای لحظه‌ای منبع) حذف می‌شود.
 function filterLocalOutliers(points) {
-  if (points.length < 5) return points;
-  const halfWindow = 7;
+  if (points.length < 3) return points;
+  const SPIKE_THRESHOLD = 0.06; // فاصله‌ی نقطه از همسایه‌ها
+  const NEIGHBOR_AGREEMENT = 0.02; // همسایه‌ها چقدر باید به هم نزدیک باشند تا «قابل اعتماد» حساب شوند
   return points.filter((p, i) => {
-    const lo = Math.max(0, i - halfWindow);
-    const hi = Math.min(points.length, i + halfWindow + 1);
-    const windowVals = points.slice(lo, hi).map((q) => q.p).sort((a, b) => a - b);
-    const localMedian = windowVals[Math.floor(windowVals.length / 2)];
-    return localMedian > 0 && Math.abs(p.p - localMedian) / localMedian <= 0.05;
+    if (i === 0 || i === points.length - 1) return true; // دو سر بازه دست‌نخورده می‌ماند
+    const prev = points[i - 1].p, next = points[i + 1].p;
+    if (!(prev > 0) || !(next > 0) || !(p.p > 0)) return true;
+    const neighborsAgree = Math.abs(prev - next) / next <= NEIGHBOR_AGREEMENT;
+    if (!neighborsAgree) return true; // همسایه‌ها خودشان در حال حرکت‌اند (رالی واقعی) — دست نزن
+    const avgNeighbor = (prev + next) / 2;
+    return Math.abs(p.p - avgNeighbor) / avgNeighbor <= SPIKE_THRESHOLD;
   });
 }
+
 
 async function fetchCommitList(baseUrl, pages) {
   const pageNums = Array.from({ length: pages }, (_, i) => i + 1);
