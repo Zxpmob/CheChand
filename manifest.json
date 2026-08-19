@@ -1,6 +1,6 @@
 {
-  "name": "چی چند — قیمت طلا، ارز، سکه و رمزارز",
-  "short_name": "چی چند",
+  "name": "CheChand - Gold, Currency & Crypto Prices",
+  "short_name": "CheChand",
   "description": "قیمت لحظه‌ای طلا، ارز، سکه و رمزارز",
   "start_url": "index.html",
   "scope": ".",

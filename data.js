@@ -20,8 +20,8 @@
 
 const CONFIG = {
   // --- حالت ۱: Supabase (اختیاری، ولی توصیه‌شده) ---
-  SUPABASE_URL: "",       // مثلاً: https://xxxxxxxx.supabase.co
-  SUPABASE_ANON_KEY: "",  // کلید anon public (از Settings → API در Supabase)
+  SUPABASE_URL: "https://borviuepojawsvtvynfs.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_GJE9ZOvZAeY-sXEOA6pjng_Wmd51yLh",
 
   // --- حالت ۲: اتصال مستقیم (بدون نیاز به هیچ تنظیمی از پیش کار می‌کند) ---
   NOBITEX_STATS_URL: "https://api.nobitex.ir/market/stats",
