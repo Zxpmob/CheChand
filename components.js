@@ -52,7 +52,7 @@ function renderHeader(activePage) {
   el.innerHTML = `
     <div class="header-bar glass-strong">
       <a href="index.html" class="brand">
-        <span class="brand-mark">چ</span>
+        <span class="brand-mark"><img src="icon-192.png" alt="چی چند" width="34" height="34" loading="eager"></span>
         <span>چی چند</span>
       </a>
       <nav class="main-nav" id="main-nav">
@@ -144,7 +144,7 @@ function renderFooter() {
       <div class="footer-grid">
         <div>
           <div class="brand" style="margin-bottom:10px;">
-            <span class="brand-mark">چ</span><span>چی چند</span>
+            <span class="brand-mark"><img src="icon-192.png" alt="چی چند" width="34" height="34" loading="eager"></span><span>چی چند</span>
           </div>
           <p>نرخ لحظه‌ای طلا، سکه، ارز، رمزارز و کالاهای باارزش — با به‌روزرسانی خودکار و طراحی شیشه‌ای مدرن.</p>
         </div>
