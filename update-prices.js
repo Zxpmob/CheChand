@@ -146,33 +146,30 @@ async function getNavasanRows() {
   return items.map((it, idx) => ({ ...it, change_percent: changes[idx], updated_at: nowIso }));
 }
 
-/* رمزارز: از نوبیتکس (صرافی ایرانی، داخل ایران فیلتر نیست) — همه‌ی
-   جفت‌ارزهای به‌تتر گرفته می‌شود، یعنی عملاً همه‌ی رمزارزهای فعال آنجا */
-async function getNobitexRows() {
-  const raw = await fetchJson("https://api.nobitex.ir/market/stats", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({}),
-  });
+/* رمزارز: قبلاً از نوبیتکس می‌گرفتیم، ولی معلوم شد نوبیتکس (مثل بیشتر
+   پلتفرم‌های مالی ایرانی) فقط IP ایران را قبول می‌کند و هر IP خارجی —
+   از جمله سرورهای گیت‌هاب (روی مایکروسافت آژور، آمریکا/اروپا) — را رد
+   می‌کند؛ برای همین همیشه با خطای «fetch failed» شکست می‌خورد. راه‌حل:
+   CoinGecko که برعکس، یک سرویس جهانی است و از سرورهای گیت‌هاب مشکلی
+   ندارد. سقف رایگان CoinGecko (۵ تا ۱۵ درخواست در دقیقه) دیگر مسئله‌ای
+   نیست چون این اسکریپت فقط هر ۵ دقیقه یک‌بار (نه صدها بار از مرورگرهای
+   مختلف پشت یک IP مشترک ایرانی) اجرا می‌شود. */
+const COINGECKO_URL = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=24h";
+
+async function getCryptoRows() {
   const rows = [];
-  if (raw && raw.stats) {
-    for (const [pair, s] of Object.entries(raw.stats)) {
-      if (!pair.endsWith("-usdt")) continue;
-      if (s.isClosed) continue;
-      const symbol = pair.replace("-usdt", "").toUpperCase();
-      const price = Number(s.latest || s.bestSell || s.bestBuy);
-      if (!price) continue;
-      const dayOpen = Number(s.dayOpen) || null;
-      const changePct = s.dayChange !== undefined && s.dayChange !== null
-        ? Number(s.dayChange)
-        : (dayOpen ? ((price - dayOpen) / dayOpen) * 100 : null);
+  for (const page of [1, 2]) {
+    const raw = await fetchJson(`${COINGECKO_URL}&page=${page}`);
+    if (!Array.isArray(raw)) continue;
+    for (const coin of raw) {
+      if (coin.current_price == null) continue;
       rows.push({
-        item_id: "crypto-" + symbol.toLowerCase(),
+        item_id: "crypto-" + coin.id,
         category: "crypto",
-        name: symbol + "/USDT",
+        name: coin.name + (coin.symbol ? " (" + coin.symbol.toUpperCase() + ")" : ""),
         unit: "دلار",
-        price,
-        change_percent: changePct,
+        price: coin.current_price,
+        change_percent: coin.price_change_percentage_24h ?? null,
         updated_at: new Date().toISOString(),
       });
     }
@@ -222,10 +219,10 @@ async function main() {
   } catch (e) { console.error("Navasan ناموفق:", e.message); }
 
   try {
-    const nb = await getNobitexRows();
-    console.log("Nobitex:", nb.length, "ردیف");
-    rows = rows.concat(nb);
-  } catch (e) { console.error("Nobitex ناموفق:", e.message); }
+    const cg = await getCryptoRows();
+    console.log("CoinGecko:", cg.length, "ردیف");
+    rows = rows.concat(cg);
+  } catch (e) { console.error("CoinGecko ناموفق:", e.message); }
 
   if (!rows.length) throw new Error("هیچ قیمتی از هیچ منبعی دریافت نشد.");
 
