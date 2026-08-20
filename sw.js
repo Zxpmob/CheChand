@@ -6,7 +6,7 @@
  * شبکه گرفته می‌شوند تا قیمت همیشه واقعی و به‌روز بماند.
  */
 
-const CACHE_NAME = "chichand-shell-v6"; // نسخه دوباره عوض شد — فیکس تراکم/پرش‌های نمودار
+const CACHE_NAME = "chichand-shell-v7"; // نسخه دوباره عوض شد — فیکس تراکم/پرش‌های نمودار
 
 const SHELL_FILES = [
   "index.html", "gold.html", "coin.html", "currency.html", "crypto.html",

@@ -136,17 +136,27 @@ async function fetchJson(url, opts, retries) {
 }
 
 /* ==================== حالت ۱: Supabase ==================== */
+// نکته‌ی مهم: نسخه‌ی جدید کلیدهای Supabase (که با sb_publishable_ شروع
+// می‌شوند) دیگر یک JWT معمولی نیستند. فرستادن همین کلید هم توی هدر
+// apikey و هم توی هدر Authorization: Bearer (که قبلاً اینجا انجام
+// می‌شد) باعث می‌شود سرور با خطای ۴۰۱ (Unauthorized) درخواست را رد کند
+// — چون Authorization دیگر فقط برای توکن ورود کاربر است، نه این کلید.
+// همین ۴۰۱ باعث می‌شد سایت (بی‌سروصدا) از حالت Supabase شکست بخورد و
+// دوباره برگردد به همان حالت مستقیم/شکننده‌ی قبلی — دقیقاً همان چیزی که
+// باعث می‌شد رمزارز و پرتغییرترین‌ها باز هم خالی بمانند. با حذف هدر
+// Authorization و فرستادن فقط apikey، درخواست با نقش anon (که همان
+// policy های «public read» که ساختید اجازه‌اش را می‌دهند) درست کار می‌کند.
 async function fetchSupabaseLatest() {
   const url = `${CONFIG.SUPABASE_URL}/rest/v1/latest_prices?select=*`;
   return fetchJson(url, {
-    headers: { apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
+    headers: { apikey: CONFIG.SUPABASE_ANON_KEY },
   });
 }
 
 async function fetchSupabaseHistory(itemId, limit) {
   const url = `${CONFIG.SUPABASE_URL}/rest/v1/price_history?item_id=eq.${encodeURIComponent(itemId)}&select=price,created_at&order=created_at.asc&limit=${limit || 500}`;
   const rows = await fetchJson(url, {
-    headers: { apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}` },
+    headers: { apikey: CONFIG.SUPABASE_ANON_KEY },
   });
   if (!Array.isArray(rows)) return [];
   return rows.map((r) => ({ t: new Date(r.created_at).getTime(), p: Number(r.price) }));
