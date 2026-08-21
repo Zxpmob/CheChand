@@ -147,7 +147,7 @@ async function fetchJson(url, opts, retries) {
 // Authorization و فرستادن فقط apikey، درخواست با نقش anon (که همان
 // policy های «public read» که ساختید اجازه‌اش را می‌دهند) درست کار می‌کند.
 async function fetchSupabaseLatest() {
-  const url = `${CONFIG.SUPABASE_URL}/rest/v1/latest_prices?select=*`;
+  const url = `${CONFIG.SUPABASE_URL}/rest/v1/latest_prices?select=*&order=item_id.asc&limit=2000`;
   return fetchJson(url, {
     headers: { apikey: CONFIG.SUPABASE_ANON_KEY },
   });

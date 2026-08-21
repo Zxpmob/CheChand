@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260819i"></script>
+<script src="theme.js?v=20260820a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>مبدل واحد و محاسبه‌گر طلا و ارز | چی چند</title>
 <meta name="description" content="تبدیل واحد وزن طلا، محاسبه‌ی قیمت نهایی طلا با اجرت و سود و مالیات، محاسبه‌ی حباب سکه، تبدیل ارز و ارزش دارایی من.">
@@ -26,7 +26,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="style.css?v=20260819i">
+<link rel="stylesheet" href="style.css?v=20260820a">
 
 
 </head>
@@ -100,13 +100,13 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260819i" defer></script>
-  <script src="data.js?v=20260819i" defer></script>
-  <script src="favorites.js?v=20260819i" defer></script>
-  <script src="alerts.js?v=20260819i" defer></script>
-  <script src="render.js?v=20260819i" defer></script>
-  <script src="converter.js?v=20260819i" defer></script>
-  <script src="components.js?v=20260819i" defer></script>
+  <script src="items.js?v=20260820a" defer></script>
+  <script src="data.js?v=20260820a" defer></script>
+  <script src="favorites.js?v=20260820a" defer></script>
+  <script src="alerts.js?v=20260820a" defer></script>
+  <script src="render.js?v=20260820a" defer></script>
+  <script src="converter.js?v=20260820a" defer></script>
+  <script src="components.js?v=20260820a" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {
@@ -124,7 +124,20 @@ document.addEventListener("DOMContentLoaded", () => {
   ["w-value","w-from","w-to"].forEach(id => document.getElementById(id).addEventListener("input", drawWeight));
 
   const cSelect = document.getElementById("c-select");
-  cSelect.innerHTML = SITE_ITEMS.filter(i=>i.cat==="currency").map(i=>`<option value="${i.id}">${i.name}</option>`).join("");
+  // باگ قبلی: این select فقط یک‌بار و بلافاصله بعد از بارگذاری صفحه پر
+  // می‌شد — ولی SITE_ITEMS طبق طراحی در همان لحظه هنوز خالی است (چون
+  // دیتا به‌صورت ناهمگام از Supabase/Navasan می‌آید) و این کد دوباره
+  // اجرا نمی‌شد؛ نتیجه: select برای همیشه خالی می‌ماند و «تبدیل ارز به
+  // تومان» کار نمی‌کرد. حالا مثل fillASel، یک تابع جداگانه است و با
+  // رویداد items:updated (هر وقت آیتم جدیدی واقعاً از منبع تأیید شد)
+  // دوباره ساخته می‌شود.
+  function fillCSelect() {
+    const cur = cSelect.value;
+    cSelect.innerHTML = SITE_ITEMS.filter(i=>i.cat==="currency").map(i=>`<option value="${i.id}">${i.name}</option>`).join("");
+    if (cur && SITE_ITEMS.some(i => i.id === cur && i.cat === "currency")) cSelect.value = cur;
+  }
+  fillCSelect();
+  document.addEventListener("items:updated", () => { fillCSelect(); drawCurrency(); });
   function drawCurrency() {
     const id = cSelect.value;
     const v = parseFloat(document.getElementById("c-value").value) || 0;

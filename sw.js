@@ -6,7 +6,7 @@
  * شبکه گرفته می‌شوند تا قیمت همیشه واقعی و به‌روز بماند.
  */
 
-const CACHE_NAME = "chichand-shell-v7"; // نسخه دوباره عوض شد — فیکس تراکم/پرش‌های نمودار
+const CACHE_NAME = "chichand-shell-v9"; // نسخه دوباره عوض شد — فیکس تراکم/پرش‌های نمودار
 
 const SHELL_FILES = [
   "index.html", "gold.html", "coin.html", "currency.html", "crypto.html",
@@ -48,20 +48,22 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (!isShellRequest(url)) return; // بگذار مستقیم برود شبکه
 
-  // Stale-while-revalidate: نسخه‌ی کش‌شده را فوری نشان بده، همزمان یک
-  // نسخه‌ی تازه هم از شبکه بگیر و کش را برای دفعه‌ی بعد به‌روز کن.
+  // Network-first: همیشه اول از شبکه بگیر (تازه‌ترین نسخه‌ی واقعی)، و
+  // فقط اگر آفلاین بودی/شبکه شکست خورد، برو سراغ کش. قبلاً برعکس بود
+  // (stale-while-revalidate: کش را فوری نشان بده) — که در این مرحله از
+  // توسعه‌ی فعال سایت (که کد هر چند دقیقه عوض می‌شود) باعث می‌شد کاربر
+  // یک بار قدیمی و نسخه‌ی بعد تازه ببیند، به‌طور نامنظم و گیج‌کننده؛
+  // یعنی همان چیزی که به‌نظر می‌رسید «یک بار میاد، رفرش که می‌زنی
+  // می‌ره». الان همیشه تازه‌ترین نسخه‌ی واقعی نشان داده می‌شود.
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          if (res && res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req))
   );
 });

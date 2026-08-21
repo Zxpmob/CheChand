@@ -2,7 +2,10 @@
  * converter.js — منطق صفحه‌ی مبدل و محاسبه‌گرها
  */
 
-const WEIGHT_TO_GRAM = { gram: 1, mesghal: 4.6083, soot: 0.2305, ounce: 31.1035, kilo: 1000 };
+// سوت (soot) دقیقاً معادل ۱ میلی‌گرم است — یعنی هر ۱۰۰۰ سوت = ۱ گرم.
+// این واحد سنتی بازار طلای ایران است؛ نسخه‌ی قبلی این کد به‌اشتباه
+// ۰.۲۳۰۵ گرم داشت (حدود ۲۳۰ برابر بزرگ‌تر از مقدار واقعی).
+const WEIGHT_TO_GRAM = { gram: 1, mesghal: 4.6083, soot: 0.001, ounce: 31.1035, kilo: 1000 };
 const WEIGHT_LABEL = { gram: "گرم", mesghal: "مثقال", soot: "سوت", ounce: "اونس (تروی)", kilo: "کیلوگرم" };
 
 function convertWeight(value, from, to) {
