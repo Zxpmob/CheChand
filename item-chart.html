@@ -39,6 +39,7 @@
 
   <section class="section">
     <div class="card glass" style="padding:22px 18px;">
+      <div class="flex gap-8" id="ic-chart-pills" style="margin-bottom:14px;flex-wrap:wrap;"></div>
       <div style="position:relative;width:100%;height:340px;">
         <canvas id="ic-chart"></canvas>
       </div>
@@ -54,8 +55,8 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260820a" defer></script>
-  <script src="data.js?v=20260820a" defer></script>
+  <script src="items.js?v=20260823a" defer></script>
+  <script src="data.js?v=20260823a" defer></script>
   <script src="favorites.js?v=20260820a" defer></script>
   <script src="alerts.js?v=20260820a" defer></script>
   <script src="render.js?v=20260820a" defer></script>
@@ -71,6 +72,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const id = params.get("id") || "";
   let icChart = null;
   let foundOnce = false;
+  let activeRangeId = "7d";
+  let lastHistoryLoadAt = 0;
+  let isDrawing = false;
+  const CHART_RANGES = [
+    { id: "1d", label: "۲۴ ساعت", days: 1, maxRows: 400 },
+    { id: "7d", label: "۷ روز", days: 7, maxRows: 2300 },
+    { id: "30d", label: "۳۰ روز", days: 30, maxRows: 9000 },
+  ];
 
   function fmtDateTime(ts) {
     return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ts));
@@ -84,8 +93,26 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("ic-sub").textContent = "این صفحه باید از روی آیکن نمودار کنار هر قیمت باز شود.";
   }
 
-  async function draw() {
+  function activeRange() {
+    return CHART_RANGES.find((range) => range.id === activeRangeId) || CHART_RANGES[0];
+  }
+
+  function drawRangePills() {
+    const pills = document.getElementById("ic-chart-pills");
+    pills.innerHTML = CHART_RANGES.map((range) =>
+      `<button class="pill" data-range="${range.id}" aria-pressed="${range.id === activeRangeId}">${range.label}</button>`
+    ).join("");
+    pills.querySelectorAll(".pill").forEach((button) => button.addEventListener("click", () => {
+      activeRangeId = button.dataset.range;
+      drawRangePills();
+      draw(true);
+    }));
+  }
+  drawRangePills();
+
+  async function draw(force) {
     if (!id) return;
+    if (isDrawing) return;
     const it = SITE_ITEMS.find((i) => i.id === id);
     const cat = it ? SITE_CATEGORIES.find((c) => c.id === it.cat) : null;
 
@@ -109,28 +136,35 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const hist = await loadItemHistory(id);
-    if (!hist.length) {
-      noteEl.textContent = "هنوز هیچ داده‌ی تاریخی برای این مورد ثبت نشده — سایت را باز نگه دارید یا کمی بعد دوباره سر بزنید تا نوسانات ثبت شود.";
+    // نگذاریم هر دریافت قیمتِ ۳۰ثانیه‌ای دوباره هزاران ردیف تاریخچه را
+    // بخواند. انتخاب بازه همیشه فوراً و با force دوباره بارگذاری می‌شود.
+    if (!force && icChart && Date.now() - lastHistoryLoadAt < 4 * 60 * 1000) return;
+
+    isDrawing = true;
+    const range = activeRange();
+    noteEl.textContent = `در حال دریافت قیمت‌های ثبت‌شدهٔ واقعی برای بازهٔ ${range.label}…`;
+    let hist = [];
+    try {
+      hist = await loadItemHistory(id, {
+        days: range.days,
+        maxRows: range.maxRows,
+        chartMaxPoints: 1200,
+      });
+    } catch (err) {
+      console.error("[چی چند] دریافت تاریخچه‌ی نمودار ناموفق بود:", err);
+      noteEl.textContent = "دریافت تاریخچهٔ واقعی فعلاً ناموفق بود؛ لطفاً چند لحظه دیگر دوباره تلاش کنید.";
+      return;
+    } finally {
+      isDrawing = false;
+      lastHistoryLoadAt = Date.now();
+    }
+    if (hist.length < 2) {
+      noteEl.textContent = `برای بازهٔ ${range.label} هنوز دست‌کم دو قیمتِ واقعی ثبت نشده است. با ثبت به‌روزرسانی‌های بعدی، نمودار خودکار کامل می‌شود.`;
       return;
     }
 
-    // فقط نوسانات «امروز» (از نیمه‌شب محلی تاکنون). اگر داده‌ی امروز کم
-    // بود (مثلاً همین الان اولین بار است که این مورد بازدید می‌شود)، برای
-    // اینکه نمودار خالی نماند بازه را پله‌پله بازتر می‌کنیم.
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    let points = hist.filter((p) => p.t >= startOfDay.getTime());
-    let scopeNote = "نوسانات امروز";
-    if (points.length < 2) {
-      const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
-      points = hist.filter((p) => p.t >= dayAgo);
-      scopeNote = "۲۴ ساعت اخیر";
-    }
-    if (points.length < 2) {
-      points = hist;
-      scopeNote = "کل داده‌ی موجود (هنوز کم است)";
-    }
+    const points = hist;
+    const scopeNote = `روند ${range.label}`;
 
     const chartData = points.map((p) => ({ x: p.t, y: p.p }));
     const goldColor = getComputedStyle(document.documentElement).getPropertyValue("--gold-1").trim() || "#d4af37";
@@ -148,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
             backgroundColor: goldColor + "22",
             fill: true,
             tension: 0, // قبلاً ۰.۲۵ — منحنیِ نرمِ جعلی روی داده‌ی کم‌تراکم؛ حالا خط راست و صادق بین نقاط واقعی
-            pointRadius: 1.5, // نقاط واقعی دیده می‌شوند
+            pointRadius: points.length > 450 ? 0 : 1.5,
             pointHoverRadius: 5,
             pointHoverBackgroundColor: goldColor,
             borderWidth: 2,
@@ -193,12 +227,12 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    noteEl.textContent = `${scopeNote} — با نگه‌داشتن موس (یا انگشت) روی نمودار، تاریخ و قیمت دقیق همان لحظه دیده می‌شود. این نمودار برخلاف نمودار صفحه‌ی اصلی، با اسکرول یا کشیدن تغییر نمی‌کند.`;
+    noteEl.textContent = `${scopeNote} — هر نقطه یک قیمت ثبت‌شدهٔ واقعی است؛ اگر داده‌ها برای نمایش سریع‌تر فشرده شده باشند، همچنان از میانگین یا قیمت ساختگی استفاده نشده است. با نگه‌داشتن موس یا انگشت، زمان و قیمت دقیق را ببینید.`;
   }
 
   draw();
-  document.addEventListener("items:updated", draw);
-  document.addEventListener("prices:updated", draw);
+  document.addEventListener("items:updated", () => draw(true));
+  document.addEventListener("prices:updated", () => draw(false));
 });
 </script>
 <script>
