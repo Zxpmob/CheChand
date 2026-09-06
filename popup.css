@@ -1,0 +1,72 @@
+* { box-sizing: border-box; }
+body {
+  width: 280px;
+  margin: 0;
+  padding: 16px;
+  font-family: "Vazirmatn", Tahoma, sans-serif;
+  direction: rtl;
+  background: #14120c;
+  color: #f3efe4;
+}
+.pp-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(230, 196, 120, 0.2);
+}
+.pp-header img { width: 30px; height: 30px; border-radius: 8px; }
+.pp-header h1 { font-size: 15px; margin: 0; color: #f0cf7d; }
+.pp-header p { font-size: 11px; margin: 2px 0 0; color: #9b978c; }
+
+.pp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.pp-toggle input { width: 16px; height: 16px; accent-color: #d4af37; cursor: pointer; }
+.pp-master { font-weight: 700; color: #f0cf7d; }
+
+.pp-field { margin: 10px 0; }
+.pp-label { display: block; font-size: 12px; color: #c9c4b6; margin-bottom: 5px; }
+.pp-field select {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(230, 196, 120, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f3efe4;
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.pp-section-title {
+  font-size: 11px;
+  color: #f0cf7d;
+  margin: 12px 0 2px;
+  font-weight: 700;
+}
+
+.pp-note {
+  font-size: 10.5px;
+  color: #6b6555;
+  line-height: 1.8;
+  margin: 12px 0 6px;
+}
+.pp-site-link {
+  display: block;
+  text-align: center;
+  margin-top: 6px;
+  padding: 9px;
+  border-radius: 10px;
+  background: linear-gradient(150deg, #f0cf7d, #a6791f);
+  color: #14120c;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 12.5px;
+}

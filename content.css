@@ -1,0 +1,116 @@
+#cc-widget-root {
+  all: initial;
+  direction: rtl;
+  font-family: "Vazirmatn", Tahoma, sans-serif;
+}
+
+.cc-panel {
+  position: fixed;
+  top: 120px;
+  width: 250px;
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 2147483000;
+  background: rgba(20, 18, 12, 0.88);
+  border: 1px solid rgba(230, 196, 120, 0.28);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #f3efe4;
+  font-size: 12.5px;
+  direction: rtl;
+}
+.cc-panel-right { right: 18px; }
+.cc-panel-left { left: 18px; }
+
+.cc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(230, 196, 120, 0.2);
+}
+.cc-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #f0cf7d;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+}
+.cc-brand img { width: 18px; height: 18px; border-radius: 4px; }
+.cc-close {
+  background: none;
+  border: none;
+  color: #9b978c;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+}
+.cc-close:hover { color: #f3efe4; }
+
+.cc-body { padding: 8px 12px 12px; }
+
+.cc-section { margin-bottom: 10px; }
+.cc-section-title {
+  font-size: 11px;
+  color: #f0cf7d;
+  font-weight: 700;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(230, 196, 120, 0.15);
+}
+
+.cc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+  gap: 8px;
+}
+.cc-row-name {
+  color: #c9c4b6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 110px;
+}
+.cc-row-right { display: flex; align-items: center; gap: 6px; flex: none; }
+.cc-row-price { font-weight: 700; color: #f3efe4; font-variant-numeric: tabular-nums; }
+.cc-row-price small { font-weight: 400; color: #9b978c; font-size: 10px; }
+.cc-row-chg { font-size: 10.5px; font-weight: 700; }
+.cc-up { color: #6fd89a; }
+.cc-down { color: #f2795b; }
+
+.cc-empty {
+  color: #9b978c;
+  font-size: 11.5px;
+  line-height: 1.8;
+  padding: 6px 0;
+}
+
+.cc-ad-slot {
+  margin-top: 10px;
+  padding: 18px 10px;
+  border: 1px dashed rgba(230, 196, 120, 0.3);
+  border-radius: 10px;
+  text-align: center;
+}
+.cc-ad-label { color: #6b6555; font-size: 10.5px; }
+
+.cc-footer-link {
+  display: block;
+  text-align: center;
+  padding: 9px;
+  font-size: 11.5px;
+  color: #f0cf7d;
+  text-decoration: none;
+  border-top: 1px solid rgba(230, 196, 120, 0.2);
+}
+.cc-footer-link:hover { background: rgba(230, 196, 120, 0.08); }
+
+@media (max-width: 1400px) {
+  .cc-panel { display: none; } /* روی صفحه‌های کوچک‌تر، جای نتایج گوگل را تنگ نمی‌کند */
+}

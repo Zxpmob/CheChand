@@ -47,7 +47,7 @@ const CONFIG = {
   HISTORY_POINTS_CRYPTO: 200,
 
   CACHE_KEY: "nerkh_prices_v5",
-  HISTORY_KEY: "nerkh_history_v7",
+  HISTORY_KEY: "nerkh_history_v6", // نسخه عوض شد — تاریخچه‌ی قدیمیِ ذخیره‌شده در مرورگر کاربر (که شامل نقاط تخت/کم‌تراکم نسخه‌ی قبلی بود) کنار گذاشته می‌شود و از صفر و تمیز ساخته می‌شود
 };
 
 function isSupabaseConfigured() {
@@ -153,41 +153,13 @@ async function fetchSupabaseLatest() {
   });
 }
 
-const SUPABASE_HISTORY_PAGE_SIZE = 1000;
-
-// تاریخچه را صفحه‌به‌صفحه و از جدید به قدیم می‌خوانیم. سقف پیش‌فرض
-// Supabase معمولاً ۱۰۰۰ ردیف است؛ گرفتن یک صفحه باعث می‌شد نمودارِ «یک
-// ماه» عملاً فقط چند روز آخر را نشان دهد. با این تابع، بازه‌ی انتخاب‌شده
-// کامل دریافت می‌شود، بدون این‌که همه‌ی تاریخچه‌ی چندساله به مرورگر بیاید.
-async function fetchSupabaseHistory(itemId, options) {
-  options = options || {};
-  const maxRows = Math.max(2, Math.min(Number(options.maxRows) || 9000, 12000));
-  const since = Number(options.since) || 0;
-  const rows = [];
-
-  for (let offset = 0; offset < maxRows; offset += SUPABASE_HISTORY_PAGE_SIZE) {
-    const pageSize = Math.min(SUPABASE_HISTORY_PAGE_SIZE, maxRows - offset);
-    const query = new URLSearchParams({
-      item_id: `eq.${itemId}`,
-      select: "price,created_at",
-      order: "created_at.desc",
-      limit: String(pageSize),
-      offset: String(offset),
-    });
-    if (since) query.set("created_at", `gte.${new Date(since).toISOString()}`);
-
-    const page = await fetchJson(`${CONFIG.SUPABASE_URL}/rest/v1/price_history?${query.toString()}`, {
-      headers: { apikey: CONFIG.SUPABASE_ANON_KEY },
-    });
-    if (!Array.isArray(page) || !page.length) break;
-    rows.push(...page);
-    if (page.length < pageSize) break;
-  }
-
-  return normaliseHistoryPoints(rows.map((r) => ({
-    t: new Date(r.created_at).getTime(),
-    p: Number(r.price),
-  })));
+async function fetchSupabaseHistory(itemId, limit) {
+  const url = `${CONFIG.SUPABASE_URL}/rest/v1/price_history?item_id=eq.${encodeURIComponent(itemId)}&select=price,created_at&order=created_at.asc&limit=${limit || 500}`;
+  const rows = await fetchJson(url, {
+    headers: { apikey: CONFIG.SUPABASE_ANON_KEY },
+  });
+  if (!Array.isArray(rows)) return [];
+  return rows.map((r) => ({ t: new Date(r.created_at).getTime(), p: Number(r.price) }));
 }
 
 function applySupabaseRows(rows) {
@@ -462,70 +434,22 @@ function getHistory(id) {
   } catch (e) { return []; }
 }
 
-// فقط نقطه‌های معتبر و یکتا وارد نمودار می‌شوند. این تابع قیمت را دستکاری
-// نمی‌کند؛ صرفاً داده‌ی تکراری یا خراب را از نمایش کنار می‌گذارد.
-function normaliseHistoryPoints(points) {
-  const byTime = new Map();
-  (points || []).forEach((point) => {
-    const t = Number(point && point.t);
-    const p = Number(point && point.p);
-    if (!Number.isFinite(t) || !Number.isFinite(p) || p <= 0) return;
-    byTime.set(Math.round(t), { t: Math.round(t), p });
-  });
-  return Array.from(byTime.values()).sort((a, b) => a.t - b.t);
-}
-
-// برای رسم در موبایل و مرورگرهای ضعیف، در هر بازه‌ی زمانی فقط آخرین
-// مشاهده‌ی واقعی را نگه می‌داریم. بنابراین هیچ میانگین‌گیری یا نقطه‌ی
-// ساختگی انجام نمی‌شود و tooltip همیشه به یک قیمت ثبت‌شده اشاره دارد.
-function compactHistoryForChart(points, maxPoints) {
-  const clean = normaliseHistoryPoints(points);
-  const cap = Math.max(3, Number(maxPoints) || 1200);
-  if (clean.length <= cap) return clean;
-
-  const first = clean[0];
-  const last = clean[clean.length - 1];
-  const bucketMs = Math.max(1, (last.t - first.t) / (cap - 2));
-  const buckets = new Map();
-  clean.slice(1, -1).forEach((point) => {
-    buckets.set(Math.floor((point.t - first.t) / bucketMs), point);
-  });
-  return [first, ...Array.from(buckets.values()), last];
-}
-
 /* تاریخچه‌ی یک آیتم را برمی‌گرداند: اگر Supabase وصل است از آنجا (واقعاً
    چندروزه)، وگرنه:
    - طلا/سکه/ارز: از تاریخچه‌ی commit های گیت‌هاب (بک‌فیل واقعی، بدون دیتابیس)
    - رمزارز: مستقیم از تاریخچه‌ی واقعیِ خودِ CoinGecko برای همان کوین */
-async function loadItemHistory(id, options) {
-  options = options || {};
-  const since = Number(options.since) || (options.days ? Date.now() - Number(options.days) * 24 * 60 * 60 * 1000 : 0);
-  let points = [];
-
+async function loadItemHistory(id) {
   if (isSupabaseConfigured()) {
     try {
-      points = await fetchSupabaseHistory(id, { since, maxRows: options.maxRows });
+      const rows = await fetchSupabaseHistory(id);
+      if (rows.length) return rows;
     } catch (e) { console.error(e); }
   } else if (id.startsWith("crypto-")) {
     await backfillCryptoHistory(id);
   } else {
     await backfillAllNavasanHistory();
   }
-
-  // آخرین قیمت دریافت‌شده نیز یک مشاهده‌ی واقعی است. افزودنش باعث می‌شود
-  // انتهای نمودار تا آخرین به‌روزرسانی سایت به‌روز بماند، حتی اگر ربات
-  // ثبت تاریخچه هنوز نوبت بعدی خود را اجرا نکرده باشد.
-  const live = PriceStore.data[id];
-  if (live && Number.isFinite(Number(live.price)) && Number(live.price) > 0) {
-    points.push({ t: Number(live.updated) || Date.now(), p: Number(live.price) });
-  }
-
-  // در حالت اتصال مستقیم، تاریخچه در مرورگر تکمیل می‌شود. در حالت
-  // Supabase فقط در صورت خالی‌بودن پاسخ، کش محلی نقش fallback را دارد.
-  if (!isSupabaseConfigured() || points.length < 2) points.push(...getHistory(id));
-  points = normaliseHistoryPoints(points);
-  if (since) points = points.filter((point) => point.t >= since);
-  return compactHistoryForChart(points, options.chartMaxPoints || 1200);
+  return getHistory(id);
 }
 
 /* ==================== تاریخچه‌ی واقعی بدون دیتابیس: طلا/سکه/ارز ====================

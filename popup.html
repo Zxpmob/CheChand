@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تنظیمات چی چند</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="pp-header">
+    <img src="icons/icon-32.png" alt="">
+    <div>
+      <h1>چی چند</h1>
+      <p>چه چیزی کنار گوگل نشان داده شود؟</p>
+    </div>
+  </div>
+
+  <label class="pp-toggle pp-master">
+    <input type="checkbox" id="pp-enabled">
+    <span>نمایش نوار قیمت روی گوگل</span>
+  </label>
+
+  <div class="pp-field">
+    <span class="pp-label">محل نمایش</span>
+    <select id="pp-position">
+      <option value="both">هر دو طرف (راست و چپ)</option>
+      <option value="right">فقط راست</option>
+      <option value="left">فقط چپ</option>
+      <option value="none">هیچ‌کدام (خاموش)</option>
+    </select>
+  </div>
+
+  <div class="pp-section-title">بخش‌ها</div>
+  <label class="pp-toggle"><input type="checkbox" id="pp-gold"><span>طلا</span></label>
+  <label class="pp-toggle"><input type="checkbox" id="pp-currency"><span>ارز</span></label>
+  <label class="pp-toggle"><input type="checkbox" id="pp-crypto"><span>ارز دیجیتال</span></label>
+  <label class="pp-toggle"><input type="checkbox" id="pp-movers"><span>پرتغییرترین‌های امروز</span></label>
+  <label class="pp-toggle"><input type="checkbox" id="pp-ads"><span>نمایش فضای تبلیغاتی</span></label>
+
+  <p class="pp-note">تغییرات فوراً ذخیره می‌شوند — کافی‌ست صفحه‌ی گوگل را رفرش کنید.</p>
+  <a class="pp-site-link" href="#" id="pp-site-link" target="_blank">مشاهده‌ی سایت کامل چی چند ›</a>
+
+  <script src="popup.js"></script>
+</body>
+</html>
