@@ -161,10 +161,6 @@ function renderFooter() {
           <a href="favorites.html">علاقه‌مندی‌ها</a><br>
           <a href="search.html">جستجو</a>
         </div>
-        <div>
-          <h4>درباره‌ی داده‌ها</h4>
-          <p>قیمت طلا/سکه/ارز از یک منبع آزاد و آماده‌ی داده‌ی Navasan و قیمت رمزارز از CoinGecko دریافت می‌شود (یا از Supabase و نوبیتکس، اگر وصل شده باشد) و صرفاً جنبه‌ی اطلاع‌رسانی دارد.</p>
-        </div>
       </div>
       <div class="footer-bottom">
         <span>© <span id="footer-year"></span> چی چند — تمام حقوق محفوظ است.</span>

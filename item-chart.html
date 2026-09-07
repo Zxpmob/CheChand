@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260820d"></script>
+<script src="theme.js?v=20260821a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>نمودار نوسانات قیمت | چی چند</title>
 <meta name="description" content="نمودار نوسانات قیمت امروز — با نگه‌داشتن موس روی نمودار، قیمت و ساعت دقیق هر لحظه را ببینید.">
@@ -20,7 +20,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="style.css?v=20260820d">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="style.css?v=20260821a">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <!-- عمداً افزونه‌ی زوم/درگ اینجا اضافه نشده — طبق خواسته، این نمودار باید
      ثابت بماند و با اسکرول یا کشیدن تغییر نکند؛ فقط هاور برای دیدن قیمت
@@ -47,6 +48,19 @@
   </section>
 
   <section class="section">
+    <div class="section-head"><h2 id="ic-glance-title" style="font-size:1.1rem;">در یک نگاه</h2></div>
+    <div class="grid-prices" id="ic-glance"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head"><h2 id="ic-perf-title" style="font-size:1.1rem;">عملکرد</h2></div>
+    <div class="table-wrap glass"><table id="ic-perf-table">
+      <thead><tr><th>بازه</th><th class="num">درصد تغییر</th></tr></thead>
+      <tbody id="ic-perf-body"></tbody>
+    </table></div>
+  </section>
+
+  <section class="section">
     <a class="btn outline" id="ic-back" href="all-prices.html">‹ بازگشت</a>
   </section>
 </div>
@@ -54,12 +68,12 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260820d" defer></script>
-  <script src="data.js?v=20260820d" defer></script>
-  <script src="favorites.js?v=20260820d" defer></script>
-  <script src="alerts.js?v=20260820d" defer></script>
-  <script src="render.js?v=20260820d" defer></script>
-  <script src="components.js?v=20260820d" defer></script>
+  <script src="items.js?v=20260821a" defer></script>
+  <script src="data.js?v=20260821a" defer></script>
+  <script src="favorites.js?v=20260821a" defer></script>
+  <script src="alerts.js?v=20260821a" defer></script>
+  <script src="render.js?v=20260821a" defer></script>
+  <script src="components.js?v=20260821a" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {
@@ -131,6 +145,13 @@ document.addEventListener("DOMContentLoaded", () => {
       points = hist;
       scopeNote = "کل داده‌ی موجود (هنوز کم است)";
     }
+    // فیلتر نقاط پرت — یک خطای لحظه‌ای در خودِ منبع می‌تواند یک جهش/افت
+    // ساختگی در نمودار ایجاد کند؛ همان فیلتری که در data.js هست را اینجا
+    // هم اعمال می‌کنیم (قبلاً این‌جا اعمال نمی‌شد و همان باعث آن جهش‌های
+    // عجیب در نمودار می‌شد).
+    if (typeof filterLocalOutliers === "function") {
+      points = filterLocalOutliers(points);
+    }
 
     const chartData = points.map((p) => ({ x: p.t, y: p.p }));
     const goldColor = getComputedStyle(document.documentElement).getPropertyValue("--gold-1").trim() || "#d4af37";
@@ -194,6 +215,85 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     noteEl.textContent = `${scopeNote} — با نگه‌داشتن موس (یا انگشت) روی نمودار، تاریخ و قیمت دقیق همان لحظه دیده می‌شود. این نمودار برخلاف نمودار صفحه‌ی اصلی، با اسکرول یا کشیدن تغییر نمی‌کند.`;
+
+    // ---------------- «در یک نگاه» و «عملکرد» — از همان تاریخچه‌ی واقعی ----------------
+    if (!it) return;
+    const curPrice = PriceStore.data[it.id] ? PriceStore.data[it.id].price : null;
+    const todays = hist.filter((p) => p.t >= startOfDay.getTime());
+    const glanceEl = document.getElementById("ic-glance");
+    const perfBody = document.getElementById("ic-perf-body");
+
+    function findClosestBefore(targetT) {
+      let best = null, bestDiff = Infinity;
+      hist.forEach((p) => {
+        if (p.t <= targetT) {
+          const diff = targetT - p.t;
+          if (diff < bestDiff) { bestDiff = diff; best = p; }
+        }
+      });
+      // اگر نزدیک‌ترین نقطه بیش از ۴ ساعت با هدف فاصله دارد، یعنی داده‌ی
+      // کافی برای این بازه هنوز جمع نشده
+      if (!best || Math.abs(targetT - best.t) > 4 * 60 * 60 * 1000) return null;
+      return best.p;
+    }
+
+    if (todays.length && curPrice) {
+      const dayHigh = Math.max(...todays.map((p) => p.p));
+      const dayLow = Math.min(...todays.map((p) => p.p));
+      const swingAmt = dayHigh - dayLow;
+      const swingPct = dayLow ? (swingAmt / dayLow) * 100 : 0;
+      const yestClose = findClosestBefore(startOfDay.getTime());
+      const yestAmt = yestClose ? curPrice - yestClose : null;
+      const yestPct = yestClose ? (yestAmt / yestClose) * 100 : null;
+
+      const glanceItems = [
+        { name: "نرخ فعلی", price: curPrice, unit: it.unit },
+        { name: "بالاترین قیمت روز", price: dayHigh, unit: it.unit },
+        { name: "پایین‌ترین قیمت روز", price: dayLow, unit: it.unit },
+        { name: "بیشترین نوسان روز", price: swingAmt, unit: it.unit, changePercent: swingPct },
+      ];
+      if (yestAmt !== null) {
+        glanceItems.push({ name: "تغییر نسبت به دیروز", price: yestAmt, unit: it.unit, changePercent: yestPct });
+      }
+      glanceEl.innerHTML = glanceItems.map((g) => `
+        <div class="price-card glass">
+          <div class="pc-top"><span class="pc-name">${g.name}</span></div>
+          <div class="pc-price">${formatPrice(g.price)} <span class="pc-unit">${g.unit}</span></div>
+          ${g.changePercent !== undefined ? `<div class="pc-bottom"><span class="pc-chg ${g.changePercent > 0 ? "up" : g.changePercent < 0 ? "down" : ""}">${g.changePercent > 0 ? "▲" : g.changePercent < 0 ? "▼" : "•"} ${Math.abs(g.changePercent).toFixed(2)}٪</span></div>` : ""}
+        </div>`).join("");
+    } else {
+      glanceEl.innerHTML = `<div class="empty-state">هنوز داده‌ی امروز کافی نیست.</div>`;
+    }
+
+    if (curPrice) {
+      const periods = [
+        { label: "۱ هفته", ms: 7 * 24 * 60 * 60 * 1000 },
+        { label: "۱ ماه", ms: 30 * 24 * 60 * 60 * 1000 },
+        { label: "۶ ماه", ms: 182 * 24 * 60 * 60 * 1000 },
+        { label: "۱ سال", ms: 365 * 24 * 60 * 60 * 1000 },
+        { label: "۳ سال", ms: 3 * 365 * 24 * 60 * 60 * 1000 },
+      ];
+      perfBody.innerHTML = periods.map((p) => {
+        let basePrice = findClosestBefore(Date.now() - p.ms);
+        // برای انس جهانی طلا، بازه‌های بلندمدت (۶ماه به بعد) را از
+        // دیتای سالانه‌ی واقعی (GOLD_ANNUAL_USD) هم می‌شود تخمین زد —
+        // چون تاریخچه‌ی محلی سایت هنوز به آن عمق نمی‌رسد.
+        if (basePrice === null && it.id === "gold-ounce" && typeof GOLD_ANNUAL_USD !== "undefined") {
+          const yearsBack = Math.round(p.ms / (365 * 24 * 60 * 60 * 1000));
+          const targetYear = new Date().getFullYear() - yearsBack;
+          const row = GOLD_ANNUAL_USD.find((r) => r.y === targetYear);
+          if (row) basePrice = row.p;
+        }
+        if (basePrice === null) {
+          return `<tr><td>${p.label}</td><td class="num text-dim">داده‌ی کافی هنوز جمع نشده</td></tr>`;
+        }
+        const pct = ((curPrice - basePrice) / basePrice) * 100;
+        const cls = pct > 0 ? "up" : pct < 0 ? "down" : "";
+        return `<tr><td>${p.label}</td><td class="num ${cls}">${pct > 0 ? "▲ " : pct < 0 ? "▼ " : ""}${Math.abs(pct).toFixed(2)}٪</td></tr>`;
+      }).join("");
+    } else {
+      perfBody.innerHTML = `<tr><td colspan="2" class="text-dim">در حال دریافت قیمت لحظه‌ای…</td></tr>`;
+    }
   }
 
   draw();
