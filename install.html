@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<script src="theme.js?v=20260820d"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نصب چی چند | وب، اپ و افزونه</title>
+<meta name="description" content="چی چند را روی ویندوز، مک، لینوکس، اندروید و آی‌او‌اس نصب کنید — نسخه‌ی وب، نصب به‌عنوان اپ، و افزونه‌ی کروم.">
+<meta name="keywords" content="نصب چی چند, دانلود چی چند, اپلیکیشن قیمت طلا, افزونه کروم قیمت طلا">
+<link rel="canonical" href="https://example.com/install.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="نصب چی چند | وب، اپ و افزونه">
+<meta property="og:description" content="چی چند را روی ویندوز، مک، لینوکس، اندروید و آی‌او‌اس نصب کنید.">
+<meta property="og:locale" content="fa_IR">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="apple-touch-icon-167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CheChand">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="style.css?v=20260820d">
+
+<style>
+.install-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.install-card { padding: 22px; }
+.install-card h3 { margin: 0 0 4px; font-family: var(--font-display); font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+.install-card .platform-icon { width: 26px; height: 26px; flex: none; }
+.install-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.install-actions .btn, .install-actions .btn.outline { justify-content: flex-start; text-align: right; }
+.store-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.store-badge {
+  flex: 1; min-width: 140px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--glass-border);
+  color: var(--text-2); font-size: .8rem; text-align: center;
+}
+.soon-tag { font-size: .68rem; background: var(--gold-soft); color: var(--gold-0); padding: 2px 8px; border-radius: 999px; margin-inline-start: 6px; }
+.steps-note { font-size: .78rem; color: var(--text-2); line-height: 2; margin-top: 10px; }
+</style>
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main>
+
+<div class="container">
+  <section class="hero" style="padding:40px 0 10px;text-align:right;">
+    <span class="eyebrow"><span class="dot"></span> نصب و دسترسی سریع</span>
+    <h1 style="font-size:clamp(1.6rem,4vw,2.4rem);">چی چند را <span>نصب کنید</span></h1>
+    <p style="margin:0;max-width:680px;">روی هر سیستم‌عاملی، هم می‌توانید مستقیم از مرورگر استفاده کنید، هم آن را مثل یک برنامه‌ی واقعی نصب کنید تا با یک آیکن روی دسکتاپ یا صفحه‌ی خانه باز شود — بدون نیاز به مرورگر جداگانه.</p>
+  </section>
+
+  <section class="section">
+    <div class="install-grid">
+
+      <!-- ویندوز -->
+      <div class="install-card card glass">
+        <h3>🪟 ویندوز</h3>
+        <p class="text-dim" style="font-size:.82rem;margin:0;">نسخه‌ی وب همیشه در دسترس است؛ نصب به‌عنوان اپ هم مستقیم از همان مرورگر انجام می‌شود.</p>
+        <div class="install-actions">
+          <a class="btn" href="index.html">نسخه‌ی وب (بدون نصب)</a>
+          <button class="btn outline" id="install-pwa-btn-win">نصب به‌عنوان اپ (Chrome / Edge)</button>
+          <a class="btn outline" href="#chrome-extension-section">افزونه‌ی کروم ›</a>
+        </div>
+        <p class="steps-note">اگر دکمه‌ی نصب کار نکرد: توی Chrome یا Edge، کنار نوار آدرس دنبال آیکن نصب (⊕ یا کامپیوتر کوچک) بگردید.</p>
+      </div>
+
+      <!-- مک -->
+      <div class="install-card card glass">
+        <h3>🍎 مک (macOS)</h3>
+        <p class="text-dim" style="font-size:.82rem;margin:0;">دقیقاً مثل ویندوز — از Safari یا Chrome قابل نصب است.</p>
+        <div class="install-actions">
+          <a class="btn" href="index.html">نسخه‌ی وب (بدون نصب)</a>
+          <button class="btn outline" id="install-pwa-btn-mac">نصب به‌عنوان اپ (Chrome / Edge)</button>
+          <a class="btn outline" href="#chrome-extension-section">افزونه‌ی کروم ›</a>
+        </div>
+        <p class="steps-note">در Safari: منوی اشتراک‌گذاری (Share) → «Add to Dock».</p>
+      </div>
+
+      <!-- لینوکس -->
+      <div class="install-card card glass">
+        <h3>🐧 لینوکس</h3>
+        <p class="text-dim" style="font-size:.82rem;margin:0;">در هر توزیعی که Chrome، Chromium یا Firefox داشته باشید کار می‌کند.</p>
+        <div class="install-actions">
+          <a class="btn" href="index.html">نسخه‌ی وب (بدون نصب)</a>
+          <button class="btn outline" id="install-pwa-btn-linux">نصب به‌عنوان اپ (Chrome / Chromium)</button>
+          <a class="btn outline" href="#chrome-extension-section">افزونه‌ی کروم ›</a>
+        </div>
+      </div>
+
+      <!-- اندروید -->
+      <div class="install-card card glass">
+        <h3>🤖 اندروید</h3>
+        <p class="text-dim" style="font-size:.82rem;margin:0;">می‌توانید همین حالا به‌عنوان اپ نصبش کنید — بدون نیاز به هیچ فروشگاهی.</p>
+        <div class="install-actions">
+          <a class="btn" href="index.html">نسخه‌ی وب (بدون نصب)</a>
+          <button class="btn outline" id="install-pwa-btn-android">نصب به‌عنوان اپ (Add to Home screen)</button>
+        </div>
+        <div class="store-row">
+          <span class="store-badge">دانلود از کافه‌بازار<span class="soon-tag">به‌زودی</span></span>
+          <span class="store-badge">دانلود از مایکت<span class="soon-tag">به‌زودی</span></span>
+        </div>
+        <p class="steps-note">انتشار در کافه‌بازار و مایکت نیاز به ثبت حساب توسعه‌دهنده و ارسال اپ برای بررسی دارد — تا وقتی آماده شود، نصب مستقیم (بالا) دقیقاً همان تجربه را می‌دهد.</p>
+      </div>
+
+      <!-- آی او اس -->
+      <div class="install-card card glass">
+        <h3>📱 آی‌او‌اس (iPhone / iPad)</h3>
+        <p class="text-dim" style="font-size:.82rem;margin:0;">اپل اجازه‌ی نصب خودکار از مرورگر را نمی‌دهد؛ ولی با ۲ لمس به صفحه‌ی خانه اضافه می‌شود.</p>
+        <div class="install-actions">
+          <a class="btn" href="index.html">نسخه‌ی وب (بدون نصب)</a>
+        </div>
+        <p class="steps-note">توی Safari (نه کروم) سایت را باز کنید → دکمه‌ی اشتراک‌گذاری (مربع با فلش رو به بالا) → «Add to Home Screen».</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section" id="chrome-extension-section">
+    <div class="section-head">
+      <h2>افزونه‌ی کروم</h2>
+      <p class="desc">قیمت‌ها را کنار نتایج جستجوی گوگل ببینید، بدون باز کردن تب جدید.</p>
+    </div>
+    <div class="card glass">
+      <p style="margin:0 0 14px;font-size:.9rem;">این افزونه دو پنل شناور (راست و چپ) کنار صفحه‌ی google.com اضافه می‌کند — با قیمت طلا، ارز، رمزارز و پرتغییرترین‌های روز، و امکان انتخاب اینکه چه چیزی نمایش داده شود.</p>
+      <p class="text-dim" style="font-size:.8rem;">فعلاً این افزونه در فروشگاه کروم منتشر نشده (در حال آماده‌سازی)؛ تا آن‌موقع می‌توانید خودتان نصبش کنید:</p>
+      <ol class="text-dim" style="font-size:.82rem;line-height:2;padding-inline-start:20px;margin:8px 0 0;">
+        <li>پوشه‌ی افزونه را دانلود و از حالت فشرده خارج کنید.</li>
+        <li>در Chrome به آدرس <code>chrome://extensions</code> بروید.</li>
+        <li>«Developer mode» را روشن کنید، سپس «Load unpacked» را بزنید و پوشه را انتخاب کنید.</li>
+      </ol>
+    </div>
+  </section>
+</div>
+
+</main>
+<footer class="site-footer" id="site-footer"></footer>
+
+  <script src="items.js?v=20260820d" defer></script>
+  <script src="data.js?v=20260820d" defer></script>
+  <script src="favorites.js?v=20260820d" defer></script>
+  <script src="alerts.js?v=20260820d" defer></script>
+  <script src="render.js?v=20260820d" defer></script>
+  <script src="components.js?v=20260820d" defer></script>
+
+<script defer>
+document.addEventListener("DOMContentLoaded", () => {
+  renderHeader("install.html");
+  renderFooter();
+  initPriceEngine();
+
+  // دکمه‌ی «نصب به‌عنوان اپ» با استفاده از رویداد استاندارد نصب PWA
+  let deferredInstallPrompt = null;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+  });
+  ["install-pwa-btn-win", "install-pwa-btn-mac", "install-pwa-btn-linux", "install-pwa-btn-android"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+      } else {
+        showToast("مرورگرتان از نصب خودکار پشتیبانی نمی‌کند — از منوی مرورگر گزینه‌ی «Install app» یا «Add to Home Screen» را بزنید.");
+      }
+    });
+  });
+});
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

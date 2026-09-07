@@ -61,6 +61,10 @@ function renderPriceGrid(containerId, categoryId, limit) {
   const el = document.getElementById(containerId);
   if (!el) return;
   let items = SITE_ITEMS.filter((it) => it.cat === categoryId);
+  if (categoryId === "currency") {
+    // دلار آمریکا همیشه اول لیست ارزها باشد
+    items.sort((a, b) => (a.id === "usd" ? -1 : b.id === "usd" ? 1 : 0));
+  }
   if (limit) items = items.slice(0, limit);
   if (!items.length) { el.innerHTML = `<div class="empty-state">موردی پیدا نشد.</div>`; return; }
   el.innerHTML = items.map(priceCardHTML).join("");

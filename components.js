@@ -47,6 +47,7 @@ function renderHeader(activePage) {
     { href: "movers.html", label: "پرتغییرترین‌ها" },
     { href: "converter.html", label: "مبدل و ماشین‌حساب" },
     { href: "favorites.html", label: "علاقه‌مندی‌ها" },
+    { href: "install.html", label: "نصب" },
   ];
 
   el.innerHTML = `

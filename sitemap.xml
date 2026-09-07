@@ -9,6 +9,7 @@
   <url><loc>https://example.com/currency.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://example.com/favorites.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://example.com/gold.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://example.com/install.html</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
   <url><loc>https://example.com/index.html</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>
   <url><loc>https://example.com/movers.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://example.com/search.html</loc><changefreq>hourly</changefreq><priority>0.7</priority></url>

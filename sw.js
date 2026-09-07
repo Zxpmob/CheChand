@@ -6,12 +6,12 @@
  * شبکه گرفته می‌شوند تا قیمت همیشه واقعی و به‌روز بماند.
  */
 
-const CACHE_NAME = "chichand-shell-v10"; // نسخه دوباره عوض شد — فیکس تراکم/پرش‌های نمودار
+const CACHE_NAME = "chichand-shell-v11"; // install.html اضافه شد
 
 const SHELL_FILES = [
   "index.html", "gold.html", "coin.html", "currency.html", "crypto.html",
   "all-prices.html", "movers.html", "converter.html", "favorites.html",
-  "alerts.html", "search.html", "item-chart.html",
+  "alerts.html", "search.html", "item-chart.html", "install.html",
   "style.css",
   "items.js", "data.js", "render.js", "components.js", "favorites.js",
   "alerts.js", "converter.js", "theme.js", "gold-history-usd.js",
