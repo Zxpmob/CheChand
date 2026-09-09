@@ -21,7 +21,6 @@ function priceCardHTML(it) {
       <div class="pc-top">
         <span class="pc-name">${it.name}</span>
         <div class="pc-actions">
-          <a class="chart-btn" href="item-chart.html?id=${encodeURIComponent(it.id)}" aria-label="مشاهده نمودار نوسانات ${it.name}" title="نمودار نوسانات امروز">${ICONS.chart}</a>
           <button class="fav-btn ${fav ? "active" : ""}" data-fav="${it.id}" aria-label="افزودن به علاقه‌مندی‌ها" onclick="handleFavClick('${it.id}', this)">${fav ? ICONS.starFill : ICONS.star}</button>
         </div>
       </div>
@@ -116,7 +115,6 @@ function renderAllPricesTable(containerId, filterText, filterCat) {
       <td class="num ${chgClass}">${chg === null || chg === undefined || Number.isNaN(chg) ? "—" : (chg > 0 ? "▲ " : chg < 0 ? "▼ " : "") + Math.abs(chg).toFixed(2) + "٪"}</td>
       <td>
         <div class="pc-actions" style="justify-content:flex-end;">
-          <a class="chart-btn" href="item-chart.html?id=${encodeURIComponent(it.id)}" aria-label="مشاهده نمودار نوسانات ${it.name}" title="نمودار نوسانات امروز">${ICONS.chart}</a>
           <button class="fav-btn ${isFavorite(it.id) ? "active" : ""}" onclick="handleFavClick('${it.id}', this)">${isFavorite(it.id) ? ICONS.starFill : ICONS.star}</button>
         </div>
       </td>
@@ -158,7 +156,6 @@ function renderMovers(gainersId, losersId) {
   const row = (x, cls) => `<div class="price-card glass">
       <div class="pc-top">
         <span class="pc-name">${x.it.name}</span>
-        <a class="chart-btn" href="item-chart.html?id=${encodeURIComponent(x.it.id)}" aria-label="مشاهده نمودار نوسانات ${x.it.name}" title="نمودار نوسانات امروز">${ICONS.chart}</a>
       </div>
       <div class="pc-price">${formatPrice(x.d.price)} <span class="pc-unit">${x.it.unit}</span></div>
       <div class="pc-bottom"><span class="pc-chg ${cls}">${cls === "up" ? "▲" : "▼"} ${Math.abs(x.d.changePercent).toFixed(2)}٪</span></div>
