@@ -6,7 +6,7 @@
  * شبکه گرفته می‌شوند تا قیمت همیشه واقعی و به‌روز بماند.
  */
 
-const CACHE_NAME = "chichand-shell-v11"; // install.html اضافه شد
+const CACHE_NAME = "chichand-shell-v12"; // نمودار صفحه‌ی اصلی ساده شد + حالت بین‌المللی ارز اضافه شد
 
 const SHELL_FILES = [
   "index.html", "gold.html", "coin.html", "currency.html", "crypto.html",

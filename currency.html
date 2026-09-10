@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260821c"></script>
+<script src="theme.js?v=20260822a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>قیمت ارز | چی چند</title>
 <meta name="description" content="نرخ لحظه‌ای دلار، یورو، پوند، درهم، لیر ترکیه و سایر ارزهای مهم نسبت به تومان.">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap">
-<link rel="stylesheet" href="style.css?v=20260821c">
+<link rel="stylesheet" href="style.css?v=20260822a">
 
 
 </head>
@@ -45,17 +45,37 @@
     
     <div class="grid-prices" id="cat-grid-currency"></div>
   </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 style="font-size:1.1rem;">حالت بین‌المللی — تبدیل بین هر دو ارز</h2>
+      <p class="desc">یک ارز پایه انتخاب کنید تا ارزش همه‌ی ارزهای دیگر نسبت به همان یک واحد نشان داده شود (نه فقط نسبت به تومان).</p>
+    </div>
+    <div class="card glass">
+      <div class="field" style="max-width:320px;">
+        <label>ارز پایه</label>
+        <select id="intl-base"></select>
+      </div>
+      <div class="table-wrap glass" style="margin-top:14px;">
+        <table>
+          <thead><tr><th>ارز</th><th class="num" id="intl-col-title">ارزش نسبت به پایه</th></tr></thead>
+          <tbody id="intl-table-body"></tbody>
+        </table>
+      </div>
+      <p class="text-dim" style="font-size:.76rem;margin-top:10px;">این جدول از همان نرخ‌های واقعیِ لحظه‌ای بالا (که نسبت به تومان است) محاسبه می‌شود — یعنی همان دقتِ منبع اصلی را دارد، فقط واحدش عوض شده.</p>
+    </div>
+  </section>
 </div>
 
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260821c" defer></script>
-  <script src="data.js?v=20260821c" defer></script>
-  <script src="favorites.js?v=20260821c" defer></script>
-  <script src="alerts.js?v=20260821c" defer></script>
-  <script src="render.js?v=20260821c" defer></script>
-  <script src="components.js?v=20260821c" defer></script>
+  <script src="items.js?v=20260822a" defer></script>
+  <script src="data.js?v=20260822a" defer></script>
+  <script src="favorites.js?v=20260822a" defer></script>
+  <script src="alerts.js?v=20260822a" defer></script>
+  <script src="render.js?v=20260822a" defer></script>
+  <script src="components.js?v=20260822a" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {
@@ -64,6 +84,53 @@ document.addEventListener("DOMContentLoaded", () => {
   initPriceEngine();
 
   wireLiveGrid("cat-grid-currency", "currency");
+
+  // ---------------- حالت بین‌المللی: تبدیل بین هر دو ارز ----------------
+  const intlBaseSel = document.getElementById("intl-base");
+  const intlBody = document.getElementById("intl-table-body");
+  const intlColTitle = document.getElementById("intl-col-title");
+
+  function fillBaseSelect() {
+    const items = SITE_ITEMS.filter((it) => it.cat === "currency");
+    if (!items.length) return;
+    const cur = intlBaseSel.value;
+    intlBaseSel.innerHTML = items.map((it) => `<option value="${it.id}">${it.name}</option>`).join("");
+    if (cur && items.some((it) => it.id === cur)) intlBaseSel.value = cur;
+  }
+
+  function drawIntlTable() {
+    const baseId = intlBaseSel.value;
+    const baseItem = SITE_ITEMS.find((it) => it.id === baseId);
+    const baseData = baseId ? PriceStore.data[baseId] : null;
+    if (!baseItem || !baseData || !baseData.price) {
+      intlBody.innerHTML = `<tr><td colspan="2" class="text-dim">در حال دریافت نرخ‌ها…</td></tr>`;
+      return;
+    }
+    intlColTitle.textContent = `ارزش نسبت به ۱ ${baseItem.name}`;
+    const rows = SITE_ITEMS
+      .filter((it) => it.cat === "currency" && it.id !== baseId)
+      .map((it) => {
+        const d = PriceStore.data[it.id];
+        if (!d || !d.price) return null;
+        const crossRate = d.price / baseData.price; // چند واحد از این ارز = ۱ واحد ارز پایه (هر دو نسبت به تومان)
+        return { name: it.name, value: crossRate };
+      })
+      .filter(Boolean);
+
+    if (!rows.length) {
+      intlBody.innerHTML = `<tr><td colspan="2" class="text-dim">در حال دریافت نرخ‌ها…</td></tr>`;
+      return;
+    }
+    intlBody.innerHTML = rows.map((r) => `
+      <tr><td>${r.name}</td><td class="num">${r.value.toLocaleString("en-US", { maximumFractionDigits: r.value < 1 ? 6 : 4 })}</td></tr>
+    `).join("");
+  }
+
+  fillBaseSelect();
+  drawIntlTable();
+  intlBaseSel.addEventListener("change", drawIntlTable);
+  document.addEventListener("items:updated", () => { fillBaseSelect(); drawIntlTable(); });
+  document.addEventListener("prices:updated", drawIntlTable);
 
 });
 </script>

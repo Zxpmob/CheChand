@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<script src="theme.js?v=20260821c"></script>
+<script src="theme.js?v=20260822a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>چی چند | قیمت لحظه‌ای طلا، دلار، سکه، ارز دیجیتال و بازار ایران</title>
 <meta name="description" content="قیمت لحظه‌ای و به‌روز طلا، سکه، دلار و ارزهای خارجی، بیت‌کوین و رمزارز، فلزات ارزشمند، سنگ‌های قیمتی، خودرو و اشیای کلکسیونی، با نمودار، مبدل واحد و هشدار قیمت.">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap">
-<link rel="stylesheet" href="style.css?v=20260821c">
+<link rel="stylesheet" href="style.css?v=20260822a">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
 <script type="application/ld+json">
@@ -67,28 +67,13 @@
       <p class="desc">با نگه‌داشتن موس روی نمودار، تاریخ و قیمت دقیق را ببینید.</p>
     </div>
     <div class="card glass" style="padding:22px 18px;">
-      <div class="flex gap-8" id="gold-chart-pills" style="margin-bottom:14px;flex-wrap:wrap;"></div>
       <div style="position:relative;width:100%;height:280px;">
         <canvas id="gold-chart"></canvas>
       </div>
       <div class="flex items-center gap-12" style="justify-content:space-between;flex-wrap:wrap;margin-top:14px;">
         <p class="text-dim" id="gold-chart-note" style="font-size:.76rem;margin:0;flex:1;min-width:220px;"></p>
-
       </div>
     </div>
-  </section>
-
-  <section class="section">
-    <div class="section-head"><h2 style="font-size:1.1rem;">انس جهانی طلا در یک نگاه</h2></div>
-    <div class="grid-prices" id="gold-glance"></div>
-  </section>
-
-  <section class="section">
-    <div class="section-head"><h2 style="font-size:1.1rem;">عملکرد انس جهانی طلا</h2></div>
-    <div class="table-wrap glass"><table>
-      <thead><tr><th>بازه</th><th class="num">درصد تغییر</th></tr></thead>
-      <tbody id="gold-perf-body"></tbody>
-    </table></div>
   </section>
 
   <section class="section">
@@ -147,13 +132,13 @@
 </main>
 <footer class="site-footer" id="site-footer"></footer>
 
-  <script src="items.js?v=20260821c" defer></script>
-  <script src="gold-history-usd.js?v=20260821c" defer></script>
-  <script src="data.js?v=20260821c" defer></script>
-  <script src="favorites.js?v=20260821c" defer></script>
-  <script src="alerts.js?v=20260821c" defer></script>
-  <script src="render.js?v=20260821c" defer></script>
-  <script src="components.js?v=20260821c" defer></script>
+  <script src="items.js?v=20260822a" defer></script>
+  <script src="gold-history-usd.js?v=20260822a" defer></script>
+  <script src="data.js?v=20260822a" defer></script>
+  <script src="favorites.js?v=20260822a" defer></script>
+  <script src="alerts.js?v=20260822a" defer></script>
+  <script src="render.js?v=20260822a" defer></script>
+  <script src="components.js?v=20260822a" defer></script>
 
 <script defer>
 document.addEventListener("DOMContentLoaded", () => {
@@ -201,113 +186,28 @@ document.addEventListener("DOMContentLoaded", () => {
     return Array.from(buckets.values()).sort((a, b) => a.t - b.t);
   }
 
-  let chartMode = "minute"; // "minute" | "daily" | "weekly" | "monthly" | "yearly"
-  const pillsEl = document.getElementById("gold-chart-pills");
-  function drawPills() {
-    const modes = [
-      { id: "minute", label: "دقیقه‌ای" },
-      { id: "daily", label: "روزانه" },
-      { id: "weekly", label: "هفتگی" },
-      { id: "monthly", label: "ماهانه" },
-      { id: "yearly", label: "سالانه" },
-    ];
-    pillsEl.innerHTML = modes.map(m => `<button class="pill" data-m="${m.id}" aria-pressed="${m.id === chartMode}">${m.label}</button>`).join("");
-    pillsEl.querySelectorAll(".pill").forEach(b => b.addEventListener("click", () => {
-      chartMode = b.dataset.m;
-      drawPills();
-      drawGoldChart();
-    }));
-  }
-  drawPills();
-
   async function drawGoldChart() {
     const noteEl = document.getElementById("gold-chart-note");
-
     if (typeof Chart === "undefined") {
       noteEl.innerHTML = '<span style="color:var(--danger);">نمودار بارگذاری نشد — احتمالاً کتابخانه‌ی نمودار (از یک CDN خارجی) از دسترس شما مسدود است. بقیه‌ی سایت باید سالم کار کند.</span>';
       return;
     }
 
-    let points, unit, tickFmt, titleFmt, valueFmt;
-    const dollarFmt = (v) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // فقط «دقیقه‌ای»: آخرین ۲۴ ساعت، خام (بدون تجمیع) و با فیلتر نقاط
+    // پرت — همان لحظه‌ای که خودِ سایت جمع کرده، بدون هیچ تبی/پیچیدگی اضافه.
+    const all = await goldChartPoints();
+    const windowStart = Date.now() - 24 * 60 * 60 * 1000;
+    const windowed = all.filter((p) => p.t >= windowStart);
+    const clean = (typeof filterLocalOutliers === "function") ? filterLocalOutliers(windowed) : windowed;
+    const points = clean.map((p) => ({ x: p.t, y: p.p }));
+    const valueFmt = (v) => v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    if (chartMode === "yearly") {
-      points = GOLD_ANNUAL_USD.map(r => ({ x: new Date(r.y, 0, 1).getTime(), y: r.p }));
-      unit = "دلار";
-      tickFmt = (v) => new Date(v).getFullYear();
-      titleFmt = (v) => new Date(v).getFullYear();
-      valueFmt = (v) => formatPrice(v);
-      noteEl.textContent = "میانگین سالانه‌ی قیمت جهانی طلا (انس، به دلار) از سال ۲۰۰۶ تاکنون — دیتای واقعی و مستند (منبع: Kitco/LBMA). مقدار ۲۰۲۶ چون سال هنوز تمام نشده، آخرین قیمت شناخته‌شده است، نه میانگین کامل سال.";
+    if (points.length < 2) {
+      noteEl.textContent = isSupabaseConfigured()
+        ? "هنوز داده‌ی تاریخی کافی در Supabase ثبت نشده؛ کمی صبر کنید تا ربات گیت‌هاب چند بار قیمت را ثبت کند."
+        : "در حال بارگذاری تاریخچه‌ی واقعی انس طلا (از خودِ منبع داده)… چند ثانیه صبر کنید.";
     } else {
-      const all = await goldChartPoints();
-      unit = "دلار";
-      valueFmt = dollarFmt;
-      const now = Date.now();
-
-      // مرزهای تقویمی: شروعِ «امروز»، «این هفته» (شنبه) و «این ماه»
-      function startOfToday() {
-        const d = new Date();
-        d.setHours(0, 0, 0, 0);
-        return d.getTime();
-      }
-      function startOfWeek() {
-        const d = new Date();
-        d.setHours(0, 0, 0, 0);
-        const daysSinceSat = (d.getDay() - 6 + 7) % 7; // هفته از شنبه شروع می‌شود
-        d.setDate(d.getDate() - daysSinceSat);
-        return d.getTime();
-      }
-      function startOfMonth() {
-        const d = new Date();
-        d.setDate(1);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime();
-      }
-
-      let windowed, bucketMs, windowStart;
-      if (chartMode === "minute") {
-        windowStart = now - 2 * 24 * 60 * 60 * 1000; // ۲ روز اخیر، خام (بدون تجمیع)
-        windowed = all.filter(p => p.t >= windowStart);
-        bucketMs = 0;
-        tickFmt = (v) => fmtShort(v);
-        titleFmt = (v) => fmtDateTime(v);
-      } else if (chartMode === "daily") {
-        windowStart = startOfToday(); // از شروع همین امروز تا الان
-        windowed = all.filter(p => p.t >= windowStart);
-        bucketMs = 0;
-        tickFmt = (v) => fmtShort(v);
-        titleFmt = (v) => fmtDateTime(v);
-      } else if (chartMode === "weekly") {
-        windowStart = startOfWeek(); // از شروع همین هفته (شنبه) تا الان
-        windowed = all.filter(p => p.t >= windowStart);
-        bucketMs = 0; // چون بازه کوتاه است (حداکثر ۷ روز)، خام نشان می‌دهیم
-        tickFmt = (v) => fmtDateOnly(v);
-        titleFmt = (v) => fmtDateTime(v);
-      } else { // monthly
-        windowStart = startOfMonth(); // از شروع همین ماه تا الان
-        windowed = all.filter(p => p.t >= windowStart);
-        bucketMs = 24 * 60 * 60 * 1000; // یک نقطه به ازای هر روز (ماه طولانی‌تر است)
-        tickFmt = (v) => fmtDateOnly(v);
-        titleFmt = (v) => fmtDateTime(v);
-      }
-      const agg = aggregateByBucket(windowed, bucketMs);
-      const cleanedAgg = (typeof filterLocalOutliers === "function") ? filterLocalOutliers(agg) : agg;
-      points = cleanedAgg.map(p => ({ x: p.t, y: p.p }));
-
-      const notEnoughHistory = all.length && all[0].t > windowStart + 60 * 60 * 1000; // تاریخچه‌ی جمع‌شده هنوز به اول این بازه نمی‌رسد
-      if (points.length < 2) {
-        noteEl.textContent = isSupabaseConfigured()
-          ? "هنوز داده‌ی تاریخی کافی در Supabase ثبت نشده؛ کمی صبر کنید تا ربات گیت‌هاب چند بار قیمت را ثبت کند."
-          : "در حال بارگذاری تاریخچه‌ی واقعی انس طلا (از خودِ منبع داده)… چند ثانیه صبر کنید.";
-      } else if (notEnoughHistory) {
-        noteEl.textContent = "نمودار از اولین لحظه‌ای که تاریخچه‌ی واقعی برای سایت جمع شده شروع می‌شود (هنوز به شروع این بازه نمی‌رسد) — با گذشت زمان کامل‌تر می‌شود. با نگه‌داشتن موس، تاریخ و قیمت دقیق را می‌بینید.";
-      } else {
-        // نقاط واقعی (نه یک منحنیِ ساختگی) با خط راست به هم وصل شده‌اند؛
-        // چگالی نقاط به این بستگی دارد که چقدر وقت است سایت باز است (هر
-        // چند ثانیه یک نقطه‌ی زنده) به‌علاوه‌ی تاریخچه‌ی commit های گیت‌هاب
-        // (هر حدود ۱ ساعت). یعنی نزدیک به «الان» ریزتر و در گذشته درشت‌تر است.
-        noteEl.textContent = "نقاط روی نمودار، قیمت‌های واقعی‌اند و با خط راست به‌هم وصل شده‌اند (نه یک منحنی ساختگی). با نگه‌داشتن موس روی هر نقطه، تاریخ و قیمت دقیق همان لحظه را می‌بینید.";
-      }
+      noteEl.textContent = "با نگه‌داشتن موس روی نمودار، تاریخ و قیمت دقیق همان لحظه را می‌بینید.";
     }
 
     try {
@@ -323,11 +223,8 @@ document.addEventListener("DOMContentLoaded", () => {
             borderColor: goldColor,
             backgroundColor: goldColor + "22",
             fill: true,
-            tension: 0, // قبلاً ۰.۲۵ بود؛ روی داده‌ی کم‌تراکم (هر نقطه گاهی چند ساعت فاصله)
-                        // این باعث می‌شد Chart.js یک منحنی نرم و «قوس‌دار» جعلی رسم کند که
-                        // اصلاً شبیه نوسان واقعی طلا (که همیشه ناهموار و دندانه‌داره) نبود؛
-                        // با خط راست بین نقاط واقعی، دیگر چیزی «ساخته» نمی‌شود.
-            pointRadius: chartMode === "minute" || chartMode === "daily" ? 1.5 : 2, // نقاط واقعی دیده می‌شوند، نه فقط یک خط پیوسته‌ی گمراه‌کننده
+            tension: 0.25,
+            pointRadius: 0,
             pointHoverRadius: 5,
             pointHoverBackgroundColor: goldColor,
             borderWidth: 2,
@@ -340,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
           scales: {
             x: {
               type: "linear",
-              ticks: { color: "rgba(150,150,150,.7)", maxRotation: 0, callback: tickFmt },
+              ticks: { color: "rgba(150,150,150,.7)", maxRotation: 0, callback: (v) => fmtShort(v) },
               grid: { color: "rgba(150,150,150,.10)" },
             },
             y: {
@@ -350,15 +247,13 @@ document.addEventListener("DOMContentLoaded", () => {
           },
           plugins: {
             legend: { display: false },
-            // درگ‌کردن/زوم با موس کامل خاموش شد — چارت مثل اپلیکیشن میلی
-            // ثابت می‌مونه، فقط با هاور تولتیپ نشون می‌ده، جایی جابه‌جا نمی‌شه.
             tooltip: {
               rtl: true,
               titleFont: { family: "Vazirmatn" },
               bodyFont: { family: "Vazirmatn" },
               callbacks: {
-                title: (items) => items.length ? titleFmt(items[0].parsed.x) : "",
-                label: (item) => valueFmt(item.parsed.y) + " " + unit,
+                title: (items) => items.length ? fmtDateTime(items[0].parsed.x) : "",
+                label: (item) => valueFmt(item.parsed.y) + " دلار",
               },
             },
           },
@@ -370,88 +265,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ---------------- «در یک نگاه» و «عملکرد» — با دیتای واقعی ----------------
-  async function drawGoldGlanceAndPerf() {
-    const glanceEl = document.getElementById("gold-glance");
-    const perfBody = document.getElementById("gold-perf-body");
-    if (!glanceEl || !perfBody) return;
-
-    const d = PriceStore.data["gold-ounce"];
-    const curPrice = d ? d.price : null;
-    const hist = await goldChartPoints();
-    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-    const todays = hist.filter((p) => p.t >= startOfDay.getTime());
-    const cleanToday = (typeof filterLocalOutliers === "function") ? filterLocalOutliers(todays) : todays;
-
-    function findClosestBefore(targetT) {
-      let best = null, bestDiff = Infinity;
-      hist.forEach((p) => {
-        if (p.t <= targetT) {
-          const diff = targetT - p.t;
-          if (diff < bestDiff) { bestDiff = diff; best = p; }
-        }
-      });
-      if (!best || Math.abs(targetT - best.t) > 4 * 60 * 60 * 1000) return null;
-      return best.p;
-    }
-
-    if (curPrice && cleanToday.length) {
-      const dayHigh = Math.max(curPrice, ...cleanToday.map((p) => p.p));
-      const dayLow = Math.min(curPrice, ...cleanToday.map((p) => p.p));
-      const swingAmt = dayHigh - dayLow;
-      const swingPct = dayLow ? (swingAmt / dayLow) * 100 : 0;
-      const yestClose = findClosestBefore(startOfDay.getTime());
-      const yestAmt = yestClose ? curPrice - yestClose : null;
-      const yestPct = yestClose ? (yestAmt / yestClose) * 100 : null;
-
-      const items = [
-        { name: "نرخ فعلی", price: curPrice },
-        { name: "بالاترین قیمت روز", price: dayHigh },
-        { name: "پایین‌ترین قیمت روز", price: dayLow },
-        { name: "بیشترین نوسان روز", price: swingAmt, changePercent: swingPct },
-      ];
-      if (yestAmt !== null) items.push({ name: "تغییر نسبت به دیروز", price: yestAmt, changePercent: yestPct });
-
-      glanceEl.innerHTML = items.map((g) => `
-        <div class="price-card glass">
-          <div class="pc-top"><span class="pc-name">${g.name}</span></div>
-          <div class="pc-price">${g.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="pc-unit">دلار</span></div>
-          ${g.changePercent !== undefined ? `<div class="pc-bottom"><span class="pc-chg ${g.changePercent > 0 ? "up" : g.changePercent < 0 ? "down" : ""}">${g.changePercent > 0 ? "▲" : g.changePercent < 0 ? "▼" : "•"} ${Math.abs(g.changePercent).toFixed(2)}٪</span></div>` : ""}
-        </div>`).join("");
-    } else {
-      glanceEl.innerHTML = `<div class="empty-state">در حال دریافت قیمت لحظه‌ای…</div>`;
-    }
-
-    if (curPrice) {
-      const periods = [
-        { label: "۱ هفته", kind: "local", ms: 7 * 24 * 60 * 60 * 1000 },
-        { label: "۱ ماه", kind: "local", ms: 30 * 24 * 60 * 60 * 1000 },
-        { label: "۶ ماه", kind: "monthly", months: 6 },
-        { label: "۱ سال", kind: "monthly", months: 12 },
-        { label: "۳ سال", kind: "monthly", months: 36 },
-      ];
-      perfBody.innerHTML = periods.map((p) => {
-        let basePrice = p.kind === "local"
-          ? findClosestBefore(Date.now() - p.ms)
-          : (typeof goldMonthlyPriceMonthsAgo === "function" ? goldMonthlyPriceMonthsAgo(p.months) : null);
-        if (basePrice === null) {
-          return `<tr><td>${p.label}</td><td class="num text-dim">داده‌ی کافی هنوز جمع نشده</td></tr>`;
-        }
-        const pct = ((curPrice - basePrice) / basePrice) * 100;
-        const cls = pct > 0 ? "up" : pct < 0 ? "down" : "";
-        return `<tr><td>${p.label}</td><td class="num ${cls}">${pct > 0 ? "▲ " : pct < 0 ? "▼ " : ""}${Math.abs(pct).toFixed(2)}٪</td></tr>`;
-      }).join("");
-    } else {
-      perfBody.innerHTML = `<tr><td colspan="2" class="text-dim">در حال دریافت قیمت لحظه‌ای…</td></tr>`;
-    }
-  }
-
   drawGoldChart();
-  drawGoldGlanceAndPerf();
-  document.addEventListener("prices:updated", () => {
-    if (chartMode === "minute" || chartMode === "daily") drawGoldChart();
-    drawGoldGlanceAndPerf();
-  });
+  document.addEventListener("prices:updated", drawGoldChart);
 });
 </script>
 <script>
